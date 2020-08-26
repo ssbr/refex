@@ -41,7 +41,7 @@ import sys
 import tempfile
 import textwrap
 import traceback
-from typing import List, Iterable, Optional, Text, Tuple, Union
+from typing import Dict, List, Iterable, Optional, Text, Tuple, Union
 
 from absl import app
 import attr
@@ -220,6 +220,88 @@ class RefexRunner(object):
 
 
 _BUG_REPORT_URL = 'https://github.com/ssbr/refex/issues/new/choose'
+
+
+# It was at this point, dear reader, that this programmer wondered if using
+# argparse was a mistake after all.
+#
+# The following classes implement most of the support for specifying patterns
+# and replacement templates on the command line.
+
+
+@attr.s
+class _SearchReplaceArgument(object):
+  """A --match/--sub pair."""
+  #: The pattern.
+  match = attr.ib(default=None, type=str)
+  #: The replacement (specified via --sub or --named-sub)
+  sub = attr.ib(default=None, type=Optional[Dict[str, str]])
+
+
+def _setdefault_searchreplace(o, name):
+  value = getattr(o, name, None)
+  if value is None:
+    value = [_SearchReplaceArgument()]
+    setattr(o, name, value)
+  return value
+
+
+class _AddMatchAction(argparse.Action):
+
+  def __init__(self, option_strings, dest, nargs=None, **kwargs):
+    if nargs is not None:
+      raise ValueError('nargs not allowed')
+    super(_AddMatchAction, self).__init__(option_strings, dest, **kwargs)
+
+  def __call__(self, parser, namespace, value, option_string=None):
+    search_replaces = _setdefault_searchreplace(namespace, self.dest)
+    if search_replaces[-1].match is not None:
+      search_replaces.append(_SearchReplaceArgument())
+    search_replaces[-1].match = value
+
+
+class _AddSubAction(argparse.Action):
+
+  def __init__(self, option_strings, dest, nargs=None, **kwargs):
+    if nargs is not None:
+      raise ValueError('nargs not allowed')
+    super(_AddSubAction, self).__init__(option_strings, dest, **kwargs)
+
+  def __call__(self, parser, namespace, value, option_string=None):
+    search_replaces = _setdefault_searchreplace(namespace, self.dest)
+    old_sub = search_replaces[-1].sub
+    if old_sub is not None:
+      parser.error(
+          'The most recent --match pattern has already had a substitution defined (tried to overwrite %s with --sub %s)'
+          % (old_sub, value))
+
+    search_replaces[-1].sub = {search.ROOT_LABEL: value}
+
+
+class _AddNamedSubAction(argparse.Action):
+
+  def __init__(self, option_strings, dest, nargs=None, **kwargs):
+    if nargs is not None:
+      raise ValueError('nargs not allowed')
+    super(_AddNamedSubAction, self).__init__(option_strings, dest, **kwargs)
+
+  def __call__(self, parser, namespace, value, option_string=None):
+    search_replaces = _setdefault_searchreplace(namespace, self.dest)
+    old_sub = search_replaces[-1].sub
+    if old_sub is None:
+      old_sub = search_replaces[-1].sub = {}
+    if search.ROOT_LABEL in old_sub:
+      parser.error(
+          "Can't combine --sub and --named-sub (tried to merge --sub {} and --named-sub {}".format(old_sub[search.ROOT_LABEL], value))
+
+    name, sep, pattern = value.partition('=')
+    if not sep:
+      parser.error(
+          '--named-sub incorrectly specified, missing "=": {}'.format(value))
+    if name in old_sub:
+      parser.error(
+          '--named-sub specified twice for the same key: {}, {}'.format(old_sub[name], pattern))
+    old_sub[name] = pattern
 
 
 def _absl_run_separate_argv(main_func, main_argv, absl_argv):
@@ -401,27 +483,25 @@ def _report_bug_excepthook(bug_report_url):
     sys.excepthook = old_hook
 
 
-def _get_templates(parser, options):
-  """Get the template mapping from args."""
-  if options.sub is not None:
-    templates = {search.ROOT_LABEL: options.sub}
-  else:
-    templates = {}
-    for sub in options.named_sub:
-      name, sep, pattern = sub.partition('=')
-      if not sep:
-        parser.error(
-            '--named-sub incorrectly specified, missing "=": {}{}{}'.format(
-                name, sep, pattern))
-      templates[name] = pattern
-
+def _get_sub_parser(options):
   sub_mode = options.sub_mode
   if sub_mode == 'auto':
     sub_mode = _DEFAULT_SUB_MODES[options.mode]
+  if sub_mode is None:
+    # This mode doesn't support --sub/etc. args, will fail later
+    # For now, default to sh templates.
+    sub_mode = 'sh'
+  return _SUB_MODES[sub_mode]
+
+
+def _parse_templates(parser, sub_parser, templates):
+  """Parses the template mapping from args."""
+  if templates is None:
+    return None
 
   for name, sub in templates.items():
     try:
-      template = _SUB_MODES[sub_mode](sub)
+      template = sub_parser(sub)
     except Exception as e:  # Don't want to hardcode which exceptions each template can raise: pylint: disable=broad-except
       parser.error(str(e))  # exits
 
@@ -603,7 +683,14 @@ def _parse_options(argv, parser):
     The parsed options.
   """
   options, args = _parse_args_leftovers(parser, argv)
-  options.files = args
+  options.files = []
+  if options.pattern_or_file is not None:
+    if (len(options.search_replace) == 1
+        and options.search_replace[0].match is None):
+      options.search_replace[0].match = options.pattern_or_file
+    else:
+      options.files.append(options.pattern_or_file)
+  options.files.extend(args)
   options.color = _color_choices[options.color]
   options.renderer = formatting.Renderer(
       match_format=options.format,
@@ -641,38 +728,56 @@ def argument_parser():
           """),
       **extra_kwargs)
 
-  parser.add_argument('pattern', type=six.text_type, metavar='PATTERN')
-  parser.add_argument(
+  match_options = parser.add_argument_group(
+      'match arguments',
+      'Arguments for use when performing search-replace (when passing the '
+      'REPLACEMENT argument).')
+
+  match_options.add_argument(
       '--mode',
       choices=sorted(_SEARCH_MODES),
       required=True,
       help='Pattern matching mode')
 
-  sub_options = parser.add_argument_group(
-      'substitution settings',
-      'Arguments for use when performing search-replace (when passing the '
-      'REPLACEMENT argument).')
-
-  sub_arg = sub_options.add_mutually_exclusive_group()
-  # --sub can't be combined with --named-sub because it'll cause overlapping
-  # edits.
-  sub_arg.add_argument(
-      '--sub',
+  match_options.add_argument(
+      'pattern_or_file',
       type=six.text_type,
+      metavar='PATTERN_OR_FILE',
       nargs='?',
       default=None,
-      help='Replacement expression, making this search-replace',
-      metavar='REPLACEMENT')
-  # TODO: Make this work with regular expressions.
-  sub_arg.add_argument(
-      '--named-sub',
-      type=six.text_type,
-      help=('Replacement expression to use for a specific '
-            'bound name. Format is name=replacement.'),
-      action='append',
+      help='Implicit --match argument, only used if --match is not.',
   )
 
-  sub_options.add_argument(
+  search_replace_dest = 'search_replace'
+
+  match_options.add_argument(
+      '--match',
+      type=six.text_type,
+      action=_AddMatchAction,
+      help='Pattern expression.',
+      metavar='PATTERN',
+      dest=search_replace_dest,
+  )
+
+  match_options.add_argument(
+      '--sub',
+      type=six.text_type,
+      action=_AddSubAction,
+      help='Replacement expression, making this search-replace.',
+      metavar='REPLACEMENT',
+      dest=search_replace_dest,
+  )
+  # TODO: Make this work with regular expressions.
+  match_options.add_argument(
+      '--named-sub',
+      type=six.text_type,
+      action=_AddNamedSubAction,
+      help=('Replacement expression to use for a specific '
+            'bound name. Format is name=replacement.'),
+      dest=search_replace_dest,
+  )
+
+  match_options.add_argument(
       '--sub-mode',
       choices=['auto'] + list(_SUB_MODES),
       default='auto',
@@ -681,6 +786,7 @@ def argument_parser():
 
   parser.set_defaults(
       rewriter=None,
+      **{search_replace_dest: [_SearchReplaceArgument()]}
   )
 
   return parser
@@ -689,15 +795,14 @@ def argument_parser():
 def runner_from_options(parser, options) -> RefexRunner:
   """Returns a runner based on CLI flags."""
 
-  if options.sub is not None or options.named_sub:
-    # sed mode
-    templates = _get_templates(parser, options)
-  else:
-    # grep mode
-    templates = None
+  if len(options.search_replace) != 1:
+    parser.error('Multiple search/replace is not yet implemented.')
+
+  pattern = options.search_replace[0].match
+  templates = _parse_templates(parser, _get_sub_parser(options), options.search_replace[0].sub)
 
   try:
-    searcher = _SEARCH_MODES[options.mode](options.pattern, templates)
+    searcher = _SEARCH_MODES[options.mode](pattern, templates)
   except ValueError as e:
     parser.error(str(e))
 
