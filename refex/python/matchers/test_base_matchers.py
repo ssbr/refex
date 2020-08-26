@@ -633,5 +633,94 @@ class InLineTest(matcher_test_util.MatcherTestCase):
             base_matchers.InLines(lines=[2, 4]), source), ['c = d', 'g = h'])
 
 
+class GlobTest(parameterized.TestCase):
+
+  @parameterized.parameters(['abc'], [['a', 'b', 'c']])
+  def test_sequence(self, abc_seq):
+    self.assertIsNotNone(
+        base_matchers.Glob(['a', 'b', 'c']).match(_FAKE_CONTEXT, abc_seq))
+
+  @parameterized.parameters(
+      'prefix_abc',
+      'abc_suffix',
+      '',
+      'axc',
+  )
+  def test_sequence_nomatch(self, not_abc):
+    self.assertIsNone(
+        base_matchers.Glob(['a', 'b', 'c']).match(_FAKE_CONTEXT, not_abc))
+
+  def test_empty(self):
+    empty_glob = base_matchers.Glob([])
+    self.assertIsNotNone(empty_glob.match(_FAKE_CONTEXT, ''))
+    self.assertIsNone(empty_glob.match(_FAKE_CONTEXT, 'x'))
+
+  @parameterized.parameters(
+      '',
+      'x',
+  )
+  def test_star(self, seq):
+    self.assertIsNotNone(
+        base_matchers.Glob([base_matchers.GlobStar()
+                           ]).match(_FAKE_CONTEXT, seq))
+    self.assertIsNotNone(
+        base_matchers.Glob([base_matchers.GlobStar(),
+                            base_matchers.GlobStar()
+                           ]).match(_FAKE_CONTEXT, seq))
+
+  @parameterized.parameters(
+      'a',
+      'ab',
+  )
+  def test_prefix_star(self, seq):
+    self.assertIsNotNone(
+        base_matchers.Glob(['a', base_matchers.GlobStar()
+                           ]).match(_FAKE_CONTEXT, seq))
+
+  @parameterized.parameters(
+      '',
+      'ba',
+  )
+  def test_prefix_star_nomatch(self, seq):
+    self.assertIsNone(
+        base_matchers.Glob(['a', base_matchers.GlobStar()
+                           ]).match(_FAKE_CONTEXT, seq))
+
+  @parameterized.parameters(
+      'a',
+      'ba',
+  )
+  def test_star_suffix(self, seq):
+    self.assertIsNotNone(
+        base_matchers.Glob([base_matchers.GlobStar(),
+                            'a']).match(_FAKE_CONTEXT, seq))
+
+  @parameterized.parameters(
+      '',
+      'ab',
+  )
+  def test_star_suffix_nomatch(self, seq):
+    self.assertIsNone(
+        base_matchers.Glob([base_matchers.GlobStar(),
+                            'a']).match(_FAKE_CONTEXT, seq))
+
+  @parameterized.parameters(
+      'abcd',
+      'a  bcd',
+      'abc  d',
+      'a  bc  d',
+  )
+  def test_sandich(self, seq):
+    glob = base_matchers.Glob([
+        'a',
+        base_matchers.GlobStar(),
+        'b',
+        'c',
+        base_matchers.GlobStar(),
+        'd',
+    ])
+    self.assertIsNotNone(glob.match(_FAKE_CONTEXT, seq))
+
+
 if __name__ == '__main__':
   absltest.main()
