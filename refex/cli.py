@@ -63,6 +63,11 @@ def _shorten_path(path):
   return min(filenames, key=len)
 
 
+# The number of times to iterate a search-replace, if no explicit count is
+# given but iteration is to done.
+_DEFAULT_ITERATION_COUNT = 10
+
+
 @attr.s
 class RefexRunner(object):
   """The application logic of the refex CLI app.
@@ -90,15 +95,7 @@ class RefexRunner(object):
   show_diff = attr.ib(default=True)
   show_files = attr.ib(default=True)
   verbose = attr.ib(default=False)
-  max_iterations = attr.ib()
-
-  @max_iterations.default
-  def _max_iterations_default(self):
-    # TODO: instead of hardcoded 10, base this on the command line args.
-    if self.searcher.can_reapply():
-      return 10
-    else:
-      return 0
+  max_iterations = attr.ib(default=_DEFAULT_ITERATION_COUNT)
 
   def read(self, path: str) -> Optional[Text]:
     """Reads in a file and return the resulting content as unicode.
@@ -457,6 +454,8 @@ _DEFAULT_SUB_MODES = {
     'fix': None,  # unused / not a dict-based searcher.
 }
 
+_NONZERO_ITERATION_MODES = frozenset({'fix'})
+
 assert set(_DEFAULT_SUB_MODES) == set(_SEARCH_MODES)
 
 _color_choices = collections.OrderedDict([
@@ -784,6 +783,27 @@ def argument_parser():
       help=(r'Substitution syntax type e.g. \g<foo> (re) vs $foo (sh).'
             ' Defaults to re for --mode=re, sh for all other modes.'))
 
+  match_options.add_argument(
+      '--iterate',
+      default=None,
+      const=_DEFAULT_ITERATION_COUNT,
+      nargs='?',
+      type=int,
+      metavar='N',
+      help=('Whether to re-apply the search-replace to attempt to merge fixes.'
+            ' If no number N is provided, defaults to {n}. If not provided,'
+            ' then it defaults to 0 for user-specified search/replace, and {n}'
+            ' for built-in iteration-compatible search/replace (i.e. fix).'
+            .format(n=_DEFAULT_ITERATION_COUNT)),
+  )
+
+  match_options.add_argument(
+      '--no-iterate',
+      action='store_const',
+      dest='iterate',
+      const=None,
+  )
+
   parser.set_defaults(
       rewriter=None,
       **{search_replace_dest: [_SearchReplaceArgument()]}
@@ -813,6 +833,13 @@ def runner_from_options(parser, options) -> RefexRunner:
   if not options.force_enable:
     searcher = search.PragmaSuppressedSearcher(searcher)
 
+  iteration_count = options.iterate
+  if iteration_count is None:
+    if options.mode in _NONZERO_ITERATION_MODES:
+      iteration_count = _DEFAULT_ITERATION_COUNT
+    else:
+      iteration_count = 0
+
   return RefexRunner(
       searcher=searcher,
       renderer=options.renderer,
@@ -820,6 +847,7 @@ def runner_from_options(parser, options) -> RefexRunner:
       show_diff=not options.list_files,
       show_files=options.list_files or options.print_filename,
       verbose=options.verbose,
+      max_iterations=iteration_count,
   )
 
 

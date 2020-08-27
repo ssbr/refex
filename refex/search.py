@@ -270,7 +270,7 @@ def _compile_substitutions(substitutions: Iterable[substitution.Substitution],
   urls = {sub.url for sub in significant_subs}
   if len(urls) == 1:
     [url] = urls
-    messages = [sub.message for sub in significant_subs]
+    messages = [sub.message for sub in significant_subs if sub.message]
     if len(set(messages)) == 1:
       # Present only one message, with no header.
       message_header = ''
@@ -279,9 +279,14 @@ def _compile_substitutions(substitutions: Iterable[substitution.Substitution],
     # Can't give a better URL here :/
     url = 'https://refex.readthedocs.io/en/latest/guide/fixers/merged.html'
     messages = [
-        '{sub.message}\n({sub.url})'.format(sub=sub) for sub in significant_subs
+        '{message}\n({url})'.format(message=sub.message or '(no message)',
+                                    url=sub.url)
+        for sub in significant_subs
     ]
-  message = message_header + '\n\n'.join(messages)
+  if messages:
+    message = message_header + '\n\n'.join(m for m in messages)
+  else:
+    message = None
   primary_label = 'fixedpoint'
   return substitution.Substitution(
       message=message,
@@ -324,18 +329,6 @@ class AbstractSearcher(six.with_metaclass(abc.ABCMeta)):
     del path  # unused
 
   @abc.abstractmethod
-  def can_reapply(self) -> bool:
-    """Returns True if a search/replace should be reapplied.
-
-    For example, constant-folding is useful to reapply, as each application can
-    reveal new things to constant-fold. But if two names are being swapped,
-    then reapplying the transformation would take us right back to where we
-    started. So whether this is safe or a good idea differs on a case-by-case
-    basis.
-    """
-    return False
-
-  @abc.abstractmethod
   def approximate_regex(self) -> Optional[str]:
     """Returns a regular expression that approximates the searcher (or ``None``).
 
@@ -373,9 +366,6 @@ class WrappedSearcher(AbstractSearcher):
 
   def check_is_included(self, *args, **kwargs):
     return self.searcher.check_is_included(*args, **kwargs)
-
-  def can_reapply(self):
-    return self.searcher.can_reapply()
 
   def approximate_regex(self):
     return self.searcher.approximate_regex()
@@ -583,10 +573,8 @@ class RegexSearcher(BaseRewritingSearcher):
 
   Args:
     compiled: A compiled regex.
-    can_reapply: True if the regex can be reapplied, False otherwise.
   """
   _compiled = attr.ib()
-  _can_reapply = attr.ib(default=False)
 
   def __attrs_post_init__(self):
     super(RegexSearcher, self).__attrs_post_init__()
@@ -621,9 +609,6 @@ class RegexSearcher(BaseRewritingSearcher):
         matches[named_group] = matches[i]
       yield matches
 
-  def can_reapply(self) -> bool:
-    return self._can_reapply
-
   def approximate_regex(self) -> str:
     return self._compiled.pattern
 
@@ -648,7 +633,6 @@ class BasePythonSearcher(AbstractSearcher):
 class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
   """Searcher class using :mod``refex.python.matchers``."""
   _matcher = attr.ib()
-  _can_reapply = attr.ib(default=False)
 
   def __attrs_post_init__(self):
     super(BasePythonRewritingSearcher, self).__attrs_post_init__()
@@ -708,9 +692,6 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
     if simple_node is None:
       return None
     return (simple_node.first_token.startpos, simple_node.last_token.endpos)
-
-  def can_reapply(self):
-    return self._can_reapply
 
 
 class PyMatcherRewritingSearcher(BasePythonRewritingSearcher):

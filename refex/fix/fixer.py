@@ -70,9 +70,6 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
                  for fixer in self.fixers
                  for sub in fixer.find_iter_parsed(parsed))
 
-  def can_reapply(self):
-    return True
-
 
 @attr.s(frozen=True, eq=False)
 class SimplePythonFixer(ParsedPythonFixer):
@@ -152,9 +149,6 @@ class SimplePythonFixer(ParsedPythonFixer):
           ' template applies to the whole match.')
     return future_string.Template(self._replacement.template).substitute(
         ImmutableDefaultDict(lambda k: k))
-
-  def can_reapply(self):
-    return True
 
 
 KeyType = TypeVar('KeyType')
