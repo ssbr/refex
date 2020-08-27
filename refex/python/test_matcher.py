@@ -298,21 +298,22 @@ class AstNavtest(parameterized.TestCase):
     self.assertIs(parsed.nav.get_parent(binop2.op), binop2)
     self.assertIs(parsed.nav.get_parent(binop3.op), binop3)
 
-  @parameterized.parameters((0, 1), (2, 3), (2, 10), (0, 14))
-  def test_simple_node_for_span_exprstmt(self, *span):
+  def test_simple_node_exprstmt(self):
     parsed = matcher.parse_ast('[hello, world]')
-    self.assertIs(
-        parsed.nav.get_simple_node_for_span(span), parsed.tree.body[0])
+    for child in ast.walk(parsed.tree.body[0]):
+      with self.subTest(child=child):
+        self.assertIs(parsed.nav.get_simple_node(child), parsed.tree.body[0])
 
-  @parameterized.parameters((0, 1), (0, 3), (2, 3))
-  def test_simple_node_for_span_complexstmt(self, *span):
+  def test_simple_node_complexstmt(self):
     parsed = matcher.parse_ast('for x in y: pass')
-    self.assertIsNone(parsed.nav.get_simple_node_for_span(span))
+    self.assertIsNone(parsed.nav.get_simple_node(parsed.tree.body[0]))
 
-  def test_simple_node_for_span_multi(self):
-    source = 'x = y\nfoo = bar'
-    parsed = matcher.parse_ast(source)
-    self.assertIsNone(parsed.nav.get_simple_node_for_span((0, len(source))))
+  def test_simple_node_is_expr(self):
+    """In a non-simple statement, subexpressions are their own simple node."""
+    parsed = matcher.parse_ast('for x in y: pass')
+    for_stmt = parsed.tree.body[0]
+    self.assertIs(parsed.nav.get_simple_node(for_stmt.target), for_stmt.target)
+    self.assertIs(parsed.nav.get_simple_node(for_stmt.iter), for_stmt.iter)
 
 
 class PragmaTest(parameterized.TestCase):

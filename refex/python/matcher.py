@@ -971,54 +971,29 @@ class AstNav(object):
       return None
     return parent[new_index]
 
-  @cached_property.cached_property
-  def _offsets_to_biggest_simple_node(self):
-    """Maps offsets to the biggest simple-statement/expression they're part of.
-
-    Returns:
-      A dict from file offsets to the simple node containing that offset.
-    """
-
-    offset_map = {}
-
-    class SimpleNodeMapper(ast.NodeVisitor):
-
-      def generic_visit(self, node):
-        if hasattr(node, 'body'):
-          super(SimpleNodeMapper, self).generic_visit(node)
-        else:
-          offset_map.update((offset, node) for offset in range(
-              node.first_token.startpos, node.last_token.endpos))
-
-    SimpleNodeMapper().visit(self._tree)
-    return offset_map
-
-  # TODO(b/120295503): Change this into two methods: span->leaf, leaf->simple.
-
-  def get_simple_node_for_span(self, span):
-    """Finds the 'simple' node that contains the whole span.
+  def get_simple_node(self, node: ast.AST):
+    """Finds the 'simple' node that contains this one.
 
     A simple node is either a simple statement node, or an expression node
     whose parent is not a simple node.
 
     Args:
-      span: A tuple of (start_offset [inclusive], end_offset [exclusive]).
+      node: The AST node that must be covered.
 
     Returns:
       A simple node, if the span covers exactly one simple node, or None
       otherwise.
     """
-    start, end = span
-    start_node = self._offsets_to_biggest_simple_node.get(start, None)
-    if start_node is None:
-      return None
-    # Need to get the last valid offset in the span, and the span is not
-    # inclusive.
-    end_node = self._offsets_to_biggest_simple_node.get(end - 1, None)
-
-    if start_node is end_node:
-      return start_node
-    return None
+    last_node = None
+    while True:
+      # Guaranteed to terminate as eventually we reach the module body.
+      # hasattr case will only be reached if that is the original argument.
+      if hasattr(node, 'body'):
+        return last_node
+      if not isinstance(node, list):
+        # the node.body is not the simple node, the thing inside it was.
+        last_node = node
+      node = self.get_parent(node)
 
 
 def _uniqueify_distinct_ast(tree):

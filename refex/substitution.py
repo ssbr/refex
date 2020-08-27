@@ -96,6 +96,14 @@ class Substitution(object):
   #: suggestions for statistics, suppressing categories of suggestions, etc.
   category = attr.ib(default=None, type=Optional[Text])
 
+  #: A span by which to group the substitution, or ``None`` if it is ungrouped.
+  #:
+  #: The scope should ideally be as local as possible. For example, grouping by
+  #: expression or by line is sensible.
+  #:
+  #: Suggestions with the same non-``None`` span may be merged.
+  key_span = attr.ib(default=None, type=Optional[Tuple[int, int]])
+
   @property
   def primary_span(self) -> Tuple[int, int]:
     """A convenience attribute for the span for the primary label."""

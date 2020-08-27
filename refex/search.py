@@ -162,12 +162,8 @@ def find_iter(searcher: 'AbstractSearcher',
   searcher.check_is_included(path)
   parsed = searcher.parse(data, path)
 
-  def group_for_groupby(sub: substitution.Substitution):
-    """Groups substitutions for itertools.groupby."""
-    return searcher.key_span(parsed, sub)
-
   for span, span_subs in itertools.groupby(
-      searcher.find_iter_parsed(parsed), group_for_groupby):
+      searcher.find_iter_parsed(parsed), lambda sub: sub.key_span):
     span_subs = list(span_subs)
     logging.debug('For searcher on %s, span group %r yields %d span subs: %r',
                   parsed.path, span, len(span_subs), span_subs)
@@ -327,23 +323,6 @@ class AbstractSearcher(six.with_metaclass(abc.ABCMeta)):
     """Raises SkipFileError if a path should not be searched.."""
     del path  # unused
 
-  def key_span(self, parsed: parsed_file.ParsedFile,
-               sub: substitution.Substitution) -> Optional[Span]:
-    """Returns a span to group the substitution, or``None`` if it is ungrouped.
-
-    Implementations should try to keep the scope as local as possible. For
-    example, grouping by expression or by line is sensible.
-
-    Args:
-      parsed: The parsed file.
-      sub: The substitution to compute a group key for.
-
-    Returns:
-      A span. Suggestions with the same span may be merged, unless it is None.
-    """
-    del parsed, sub  # unused
-    return None
-
   @abc.abstractmethod
   def can_reapply(self) -> bool:
     """Returns True if a search/replace should be reapplied.
@@ -394,9 +373,6 @@ class WrappedSearcher(AbstractSearcher):
 
   def check_is_included(self, *args, **kwargs):
     return self.searcher.check_is_included(*args, **kwargs)
-
-  def key_span(self, *args, **kwargs):
-    return self.searcher.key_span(*args, **kwargs)
 
   def can_reapply(self):
     return self.searcher.can_reapply()
@@ -571,6 +547,15 @@ class BaseRewritingSearcher(AbstractSearcher):
     del parsed  # unused
     return []
 
+  def key_span_for_dict(
+      self,
+      parsed: parsed_file.ParsedFile,
+      match_dict: Iterable[Mapping[MatchKey, match.Match]],
+  ) -> Optional[Tuple[int, int]]:
+    """Returns the ``key_span`` that the final ``Substitution`` will have."""
+    return None
+
+
   def find_iter_parsed(
       self,
       parsed: matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
@@ -588,7 +573,8 @@ class BaseRewritingSearcher(AbstractSearcher):
               if s.span not in (None, (-1, -1))
           },
           replacements=replacements,
-          primary_label=ROOT_LABEL)
+          primary_label=ROOT_LABEL,
+          key_span=self.key_span_for_dict(parsed, match_dict))
 
 
 @attr.s(frozen=True)
@@ -653,32 +639,6 @@ class BasePythonSearcher(AbstractSearcher):
       # Probably Python 2. TODO: figure out how to handle this.
       raise SkipFileError(str(e))
 
-  def key_span(self, parsed: matcher.PythonParsedFile,
-               sub: substitution.Substitution):
-    """Returns a grouping span for the containing simple AST node.
-
-    Substitutions that lie within a simple statement or expression are
-    grouped together and mapped to the span of the largest simple node they are
-    a part of. Every other substitution is mapped to None.
-
-    The idea here is that we want easy bite-sized chunks that are useful for
-    quickly checking parseability, and for re-running the fixers over that
-    chunk. Simple statements like import and return, as well as expressions
-    that are part of larger statements, are perfect for this.
-
-    Args:
-      parsed: The ParsedFile for the same file.
-      sub: The substitution.
-
-    Returns:
-      A grouping key, or None.
-    """
-
-    simple_node = parsed.nav.get_simple_node_for_span(sub.primary_span)
-    if simple_node is None:
-      return None
-    return (simple_node.first_token.startpos, simple_node.last_token.endpos)
-
   def approximate_regex(self):
     """Returns ``None`` (no approximation)."""
     return None
@@ -718,6 +678,36 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
           bound_name: match.value
           for bound_name, match in result.bindings.items()
       }
+
+  def key_span_for_dict(self, parsed: matcher.PythonParsedFile,
+                              match_dict: Dict[str, match.Match]):
+    """Returns a grouping span for the containing simple AST node.
+
+    Substitutions that lie within a simple statement or expression are
+    grouped together and mapped to the span of the largest simple node they are
+    a part of. Every other substitution is mapped to None.
+
+    The idea here is that we want easy bite-sized chunks that are useful for
+    quickly checking parseability, and for re-running the fixers over that
+    chunk. Simple statements like import and return, as well as expressions
+    that are part of larger statements, are perfect for this.
+
+    Args:
+      parsed: The ParsedFile for the same file.
+      match_dict: The match dict.
+
+    Returns:
+      A grouping key, or None.
+    """
+
+    m = match_dict[ROOT_LABEL]
+    if not isinstance(m, matcher.LexicalASTMatch):
+      return None
+
+    simple_node = parsed.nav.get_simple_node(m.matched)
+    if simple_node is None:
+      return None
+    return (simple_node.first_token.startpos, simple_node.last_token.endpos)
 
   def can_reapply(self):
     return self._can_reapply
