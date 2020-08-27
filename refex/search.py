@@ -650,7 +650,7 @@ class BasePythonSearcher(AbstractSearcher):
     try:
       return matcher.parse_ast(data, filename)
     except matcher.ParseError as e:
-      # Probably Python 3. TODO: figure out how to handle this.
+      # Probably Python 2. TODO: figure out how to handle this.
       raise SkipFileError(str(e))
 
   def key_span(self, parsed: matcher.PythonParsedFile,
