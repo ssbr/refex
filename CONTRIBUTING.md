@@ -22,9 +22,9 @@ $ poetry install
 $ poetry run python -m pytest
 ```
 
-Due to the use of the [`absltest`](https://abseil.io/docs/python/guides/testing)
+Due to the use of the [absltest](https://abseil.io/docs/python/guides/testing)
 framework, Refex cannot use many test runners. See
-[`conftest.py`](https://github.com/ssbr/refex/blob/master/refex/conftest.py).
+[conftest.py](https://github.com/ssbr/refex/blob/master/refex/conftest.py).
 
 ## Code Review
 
