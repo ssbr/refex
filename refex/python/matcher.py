@@ -83,6 +83,7 @@ import copy
 import functools
 import sys
 import tokenize
+import weakref
 
 from absl import logging
 import asttokens
@@ -221,6 +222,9 @@ def submatcher_list_attrib(*args, **kwargs):  # TODO: make walk a kwarg when Py2
 # by the kind of object they work on.
 
 
+# We compare for equality during e.g. equivalence checks when combining multiple
+# python searchers, but we cache the entire object, so equality being identity
+# is fine.
 @attr.s(frozen=True, eq=False)
 class PythonParsedFile(parsed_file.ParsedFile):
   """Preprocessed file information, including the AST etc."""
@@ -1118,6 +1122,7 @@ def _pragmas(tokens):
       # and therefore any pragmas are just for this line.
       fresh_line = False
 
+_parsed_ast_cache = weakref.WeakValueDictionary()
 
 def parse_ast(source_code: str, filename:str ='<string>') -> PythonParsedFile:
   """Parses an AST in a way that supports the built-in matchers.
@@ -1135,6 +1140,9 @@ def parse_ast(source_code: str, filename:str ='<string>') -> PythonParsedFile:
   Raises:
     ParseError: The file failed to parse.
   """
+  cache_key = (_CompareById(source_code), filename)
+  if cache_key in _parsed_ast_cache:
+    return _parsed_ast_cache[cache_key]
 
   # workaround for Python 2 ast module not being able to parse the code if it
   # has a coding declaration.
@@ -1156,7 +1164,7 @@ def parse_ast(source_code: str, filename:str ='<string>') -> PythonParsedFile:
     # UnicodeDecodeError is also a ValueError subclass, so we want to catch
     # it specially.
     raise ParseError('UnicodeDecodeError: {}'.format(e))
-  return PythonParsedFile(
+  parsed = PythonParsedFile(
       text=source_code_text,
       path=filename,
       pragmas=tuple(sorted(_pragmas(astt.tokens), key=lambda p: p.start)),
@@ -1164,6 +1172,8 @@ def parse_ast(source_code: str, filename:str ='<string>') -> PythonParsedFile:
       tree=astt.tree,
       nav=AstNav(astt.tree),
   )
+  _parsed_ast_cache[cache_key] = parsed
+  return parsed
 
 
 def find_iter(matcher: Matcher, parsed: PythonParsedFile) -> Iterator[MatchInfo]:

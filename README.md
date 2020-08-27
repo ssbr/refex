@@ -35,17 +35,19 @@ Here, a naive replacement using regular expressions could have resulted in
 either `print(foo(bar(b)) + 1)` or `print(foo(bar(b) + 1))`, depending on
 whether `$x` was matched greedily or non-greedily.
 
-TODO: describe combining replacements. Ideally have an example that is
-something like:
+**Combining replacements:** you can pass multiple search/replace pairs to
+Refex which combine to do more complex rewrites. For example:
 
 ```sh
-refex --mode=py.expr.multi -R dir/ -i '
-  self.assertEquals: self.assertEqual
-  self.assertEqual($x, None): self.assertIsNone($x)
-'
+# Rewrites "self.assertTrue(x == False)" to "self.assertFalse(x)", even though
+# that was not explicitly called out.
+refex --mode=py.expr -i --iterate \
+  --match='self.assertTrue($x == $y)'  --sub='self.assertEqual($x, $y)' \
+  --match='self.assertEqual($x, False)' --sub='self.assertFalse($x)' \
+  -R dir/
 ```
 
-TODO: also describe matcher interface.
+TODO: also describe `--mode=py`.
 
 ## Getting started
 

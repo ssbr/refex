@@ -824,16 +824,23 @@ def argument_parser():
 def runner_from_options(parser, options) -> RefexRunner:
   """Returns a runner based on CLI flags."""
 
-  if len(options.search_replace) != 1:
-    parser.error('Multiple search/replace is not yet implemented.')
+  searchers = []
+  sub_parser = _get_sub_parser(options)
+  searcher_factory = _SEARCH_MODES[options.mode]
+  for sr in options.search_replace:
+    pattern = sr.match
+    templates = _parse_templates(parser, sub_parser, sr.sub)
+    try:
+      searchers.append(searcher_factory(pattern, templates))
+    except ValueError as e:
+      parser.error(str(e))
 
-  pattern = options.search_replace[0].match
-  templates = _parse_templates(parser, _get_sub_parser(options), options.search_replace[0].sub)
-
-  try:
-    searcher = _SEARCH_MODES[options.mode](pattern, templates)
-  except ValueError as e:
-    parser.error(str(e))
+  if len(searchers) == 0:
+    raise AssertionError("Bug in refex: there should always be a (possibly empty) search-replace pair.")
+  elif len(searchers) == 1:
+    [searcher] = searchers
+  else:
+    searcher = search.CombinedSearcher(searchers)
 
   if options.also or options.noalso:
     searcher = search.AlsoRegexpSearcher(

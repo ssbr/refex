@@ -401,6 +401,34 @@ class MainTest(MainTestBase):
     self.assertStartsWith(f.read_text(), 'wrap(wrap(wrap(')
     self.assertEndsWith(f.read_text(), ')))')
 
+  def test_sub_multi(self):
+    f = self.create_tempfile(content='a\nb\n')
+    _ = self.main([
+        '--mode=py.expr',
+        '--match=a',
+        '--sub=a2',
+        '--match=b',
+        '--sub=b2',
+        f.full_path,
+        '-i',
+    ])
+    self.assertEqual(f.read_text(), 'a2\nb2\n')
+
+  def test_sub_multi_iterate(self):
+    # realistic example, taken near-verbatim from the readme
+    f = self.create_tempfile(content='self.assertTrue(a == False)')
+    _ = self.main([
+        '--mode=py.expr',
+        '-i',
+        '--iterate',
+        '--match=self.assertTrue($x == $y)',
+        '--sub=self.assertEqual($x, $y)',
+        '--match=self.assertEqual($x, False)',
+        '--sub=self.assertFalse($x)',
+        f.full_path,
+    ])
+    self.assertEqual(f.read_text(), 'self.assertFalse(a)')
+
   def test_sub_dryrun(self):
     original_content = 'abc\nxx xyzzy xx'
     f = self.create_tempfile(content=original_content)

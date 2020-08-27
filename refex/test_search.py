@@ -18,15 +18,19 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import re
+
 from absl.testing import absltest
 from absl.testing import parameterized
+
+from refex import formatting
+from refex import parsed_file
 from refex import search
 from refex.fix import fixer
 from refex.python import matcher
 from refex.python import syntactic_template
 from refex.python.matchers import syntax_matchers
 
-from refex import formatting
 
 class ExcludedRangesTest(parameterized.TestCase):
   """Tests range exclusion pragmas, using Python for convenience."""
@@ -118,6 +122,62 @@ class RewriteStringTest(absltest.TestCase):
     source = 'my_obj.attr + other_obj.attr'
     self.assertEqual('my_obj.other + other_obj.other',
                      search.rewrite_string(fix, source, 'example.py'))
+
+
+def _sub_string(s, sub):
+  start, end = sub.primary_span
+  return s[start:end]
+
+
+def _sub_strings(s, subs):
+  return [_sub_string(s, sub) for  sub in subs]
+
+
+class CombinedSearcherTest(parameterized.TestCase):
+
+  @parameterized.parameters(
+      search.RegexSearcher.from_pattern('x', None),
+      search.PyExprRewritingSearcher.from_pattern('x', None),
+  )
+  def test_compatible_searchers(self, x_searcher):
+    src = 'x, y'
+    searcher = search.CombinedSearcher([
+        x_searcher,
+        search.RegexSearcher.from_pattern('y', None),
+    ])
+
+    self.assertEqual(
+        _sub_strings(src, search.find_iter(searcher, src, '<string>')),
+        ['x', 'y'],
+    )
+
+  def test_incompatible_searchers(self):
+
+    class IncompatibleParsedFile(parsed_file.ParsedFile):
+      pass
+
+    class IncompatibleSearcher(search.RegexSearcher):
+
+      def parse(self, data, filename):
+        return IncompatibleParsedFile(data, filename)
+
+  def test_approximate_regex(self):
+    searcher = search.CombinedSearcher([
+        search.RegexSearcher.from_pattern('x', None),
+        search.RegexSearcher.from_pattern('y', None),
+    ])
+
+    self.assertEqual(searcher.approximate_regex(), '(?:x)|(?:y)')
+    # doesn't crash
+    re.compile(searcher.approximate_regex())
+
+  def test_null_approximate_regex(self):
+    searcher = search.CombinedSearcher([
+        search.PyExprRewritingSearcher.from_pattern('x', None),
+        search.RegexSearcher.from_pattern('y', None),
+    ])
+
+    self.assertIsNone(searcher.approximate_regex())
 
 
 if __name__ == '__main__':

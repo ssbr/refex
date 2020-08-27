@@ -62,6 +62,9 @@ Wrappers
 .. autoclass:: AlsoRegexpSearcher
    :show-inheritance:
    :members:
+.. autoclass:: CombinedSearcher
+   :show-inheritance:
+   :members:
 
 Concrete Searchers
 ..................
@@ -400,6 +403,85 @@ class AlsoRegexpSearcher(WrappedSearcher):
         any(r.search(data) for r in self._also_not)):
       raise SkipFileNoResultsError()
     return self.searcher.parse(data, path)
+
+
+@attr.s(frozen=True)
+class CombinedSearcher(AbstractSearcher):
+  """Searcher which combines the results of multiple sub-searchers.
+
+  Note: all searchers must share compatible ``~parsed_file.ParsedFile`` types.
+  See the :meth:`parse` docstring for requirements.
+  """
+  # This algorithm is O(n*m) and keeps growing as you add more
+  # searchers. Not avoidable in the general case, but, e.g. for Python, you
+  # could walk once and only run the searchers that could possibly match
+  # at a given point using an O(1) type lookup -- which would generally cut
+  # down the number of results.
+  searchers = attr.ib(type=Tuple[AbstractSearcher, ...], converter=tuple,)
+
+  def parse(self, data: Text, filename: str):
+    """Parses using each sub-searcher, returning the most specific parsed file.
+
+    Here "Most Specific" means the most specific subclass.
+
+    This places strong requirements on the searchers:
+
+      * values returned by one ``parse()`` method should always be usable in
+        place of the value returned by another, if they return the same type,
+        or if the type of the first is a subclass of the type of the other.
+      * Ideally, for performance, values should be cached.
+
+    Args:
+      data: The data to be parsed.
+      filename: The name of the file.
+
+    Returns:
+      The merged / most specific parsed file.
+    """
+    # In a language like C++ or Rust, rather than merging the types, we would
+    # enforce that they are the same type. Python has *no way to do this* ahead
+    # of time: even if we check the type(searcher), for example, two wrapping
+    # searchers will look the same even if they wrap different types.
+    # So we need to do the check inside parse(), not inside the constructor,
+    # and at that point, there's no reason to disallow mixing the use of
+    # the base ParsedFile and a subclass -- we can rely on some variant of
+    # the Liskov substitution principle to let us use the subclass in place of
+    # the base class.
+    # If searcher types don't cache parse results, this will be unnecessarily
+    # slow.
+    parsed = None
+    for searcher in self.searchers:
+      new_parsed = searcher.parse(data, filename)
+      if parsed is None:
+        parsed = new_parsed
+      if type(parsed) == type(new_parsed):  # pylint: disable=unidiomatic-typecheck
+        # compatible, doesn't matter which we pick.
+        assert parsed == new_parsed
+      elif issubclass(type(new_parsed), type(parsed)):
+        parsed = new_parsed
+      elif issubclass(type(parsed), type(new_parsed)):
+        # compatible, but keep old.
+        pass
+      else:
+        raise TypeError('Incompatible parsed file types: %r / %r' % (parsed, new_parsed))
+    return parsed
+
+  def check_is_included(self, *args, **kwargs):
+    """Only includes a file if *all* sub-searchers include it."""
+    for searcher in self.searchers:
+      searcher.check_is_included(*args, **kwargs)
+
+  def approximate_regex(self):
+    regexes = [searcher.approximate_regex() for searcher in self.searchers]
+    if None in regexes:
+      return None
+    return '|'.join('(?:%s)' % regex for regex in regexes)
+
+  def find_iter_parsed(self, parsed):
+    """Returns all disjoint substitutions for parsed, in sorted order."""
+    return substitution.disjoint_substitutions(sub
+                 for searcher in self.searchers
+                 for sub in searcher.find_iter_parsed(parsed))
 
 
 def _pragma_excluded_ranges(

@@ -33,7 +33,7 @@ import cached_property
 from typing import Mapping, Optional, Iterable, Text
 
 
-@attr.s(frozen=True, eq=False)
+@attr.s(frozen=True, eq=True, order=False)
 class ParsedFile(object):
   """A wrapper for a file after preprocessing.
 
