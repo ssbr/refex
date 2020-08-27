@@ -1,0 +1,1 @@
+.. automodule:: refex.substitution

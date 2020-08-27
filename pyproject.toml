@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "refex"
+version = "0.0.0"
+description = "A syntactically-aware search and replace tool."
+authors = ["Devin Jeanpierre <jeanpierreda@gmail.com>"]
+
+license = "Apache-2.0"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[tool.poetry.scripts]
+refex = "refex.cli:main"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+absl-py = "^0.9"
+asttokens = "^2"
+attrs = "^19.2"
+cached-property = "^1"
+colorama = "^0.4"
+six="*"
+
+# docs
+m2r = { version = "^0.2", optional = true }
+sphinx = { version = "^2.4", optional = true }
+
+[tool.poetry.dev-dependencies]
+# TODO: make absl a test-only dep
+pytest = "^6"
+
+[tool.poetry.extras]
+docs = ["m2r", "sphinx"]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
