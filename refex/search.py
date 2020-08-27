@@ -557,7 +557,7 @@ class BaseRewritingSearcher(AbstractSearcher):
 
   @abc.abstractmethod
   def find_dicts_parsed(
-      self, parsed: matcher.PythonParsedFile
+      self, parsed: parsed_file.ParsedFile
   ) -> Iterable[Mapping[MatchKey, match.Match]]:
     """Finds all matches as an iterable of dict matches.
 
