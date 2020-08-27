@@ -332,7 +332,8 @@ def run(runner: RefexRunner, files: Iterable[Union[str, Tuple[str, str]]],
   try:
     with _report_bug_excepthook(bug_report_url):
       with colorama.colorama_text(strip=not runner.renderer.color):
-        report_failures(runner.rewrite_files(files), bug_report_url)
+        report_failures(
+            runner.rewrite_files(files), bug_report_url, runner.verbose)
   except KeyboardInterrupt:
     pass
 
@@ -391,7 +392,7 @@ def run_cli(argv,
       pass
 
 
-def report_failures(failures, bug_report_url):
+def report_failures(failures, bug_report_url, verbose):
   """Reports :meth:`RefexRunner.rewrite_files` failures, if any.
 
   These are written to a debug log file (readable via the developer script
@@ -403,6 +404,13 @@ def report_failures(failures, bug_report_url):
   """
   if not failures:
     return
+
+  if verbose:
+    for fname, failure in failures.items():
+      print('Error processing', fname, file=sys.stderr)
+      print(failure['traceback'], file=sys.stderr)
+      print('', file=sys.stderr)
+
   error_blob = dict(failures=failures, argv=sys.argv)
   if six.PY2:
     kw = {'mode': 'wb'}  # ok because of ensure_ascii=True below.
@@ -411,6 +419,7 @@ def report_failures(failures, bug_report_url):
   with tempfile.NamedTemporaryFile(
       prefix='rxerr_', suffix='.json', delete=False, **kw) as f:
     json.dump(error_blob, f, ensure_ascii=True)
+
   print(
       'Encountered {n} error(s). Report bugs to {bug_link}, and attach {f.name}'
       .format(n=len(failures), bug_link=bug_report_url, f=f),

@@ -119,7 +119,10 @@ class MainTestBase(parameterized.TestCase):
       The output to stdout of main(), as a string.
     """
     # default to nocolor so that tests run the same on all systems.
-    argv = ['refex', '--nocolor'] + args
+    # default to verbose so that you don't need to run rxerr_debug if there's
+    # an exception during testing. (Especially difficult if e.g. the test
+    # was run in cloud CI or something which doesn't let you download the file.)
+    argv = ['refex', '--nocolor', '--verbose'] + args
     with contextlib.redirect_stdout(six.StringIO()) as fake_stdout:
       try:
         self.raw_main(argv)
@@ -522,12 +525,13 @@ class MainTest(MainTestBase):
           '--named-sub=x=2', f.full_path
       ])
     lines = fake_stderr.getvalue().splitlines()
-    self.assertLen(lines, 3)
     self.assertStartsWith(
         lines[0],
         'skipped %s: TestOnlyRaisedError: error message' % f.full_path)
-    self.assertStartsWith(lines[1], 'Encountered 1 error(s)')
-    dump = lines[1].rsplit(' ', 1)[-1]
+    self.assertStartsWith(lines[2], 'Traceback')
+    lines = lines[-2:]
+    self.assertStartsWith(lines[0], 'Encountered 1 error(s)')
+    dump = lines[0].rsplit(' ', 1)[-1]
     with open(dump) as dump_f:
       error_dump = json.load(dump_f)
     # Don't care a lot about the traceback, but do care about argv and content.
