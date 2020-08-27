@@ -39,6 +39,8 @@ The following functions and classes can convert a Substitution into a diff.
 
 .. autofunction:: labeled_spans
 
+.. autofunction:: disjoint_substitutions
+
 """
 
 from __future__ import absolute_import
@@ -47,12 +49,13 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import operator
 import re
 
 import attr
 import six
 
-from typing import FrozenSet, Iterable, Mapping, Optional, Text, Tuple, Union
+from typing import FrozenSet, Iterable, List, Mapping, Optional, Text, Tuple, Union
 
 
 # Only slightly structured category name: dot-separated, no empty intra-dot
@@ -350,3 +353,40 @@ def labeled_spans(sub: Substitution):
       yield LabeledSpan(span=(range_start, pos), labels=current_labels)
     range_start = pos
     current_labels = (current_labels | to_add) - to_remove
+
+
+def disjoint_substitutions(subs: Iterable[Substitution]) -> List[Substitution]:
+  """Returns ``subs`` without overlapping substitutions, in sorted order."""
+  span_subs = [(sub.primary_span, sub) for sub in subs]
+  span_subs.sort(key=operator.itemgetter(0))
+
+  disjoint_subs = []
+
+  # Loop over the substitutions, and only append each one after it's confirmed
+  # that it doesn't intersect with the next, or is smaller than the next.
+  # (So we don't add it until the next iteration of the loop, or after the
+  # loop is over.)
+  #
+  # TODO: You know, reading it over again, isn't this totally wrong?
+  # in particular, it decides based only on the very next substitution,
+  # when it should e.g. keep going and try the one after that.
+  # I should just use the exact algorithm at
+  # https://en.wikipedia.org/wiki/Maximum_disjoint_set
+  last_start = last_end = last_sub = None
+  for (start, end), sub in span_subs:
+    if last_sub is not None:
+      if start >= last_end:
+        # no collision!
+        disjoint_subs.append(last_sub)
+      else:
+        # they collide, keep the smallest as a heuristic to keep as many as
+        # we can.
+        if end - start > last_end - last_start:
+          continue
+
+    last_start = start
+    last_end = end
+    last_sub = sub
+  if last_sub is not None:
+    disjoint_subs.append(last_sub)
+  return disjoint_subs

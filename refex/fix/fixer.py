@@ -25,6 +25,7 @@ import attr
 from refex import formatting
 from refex import future_string
 from refex import search
+from refex import substitution
 from refex.python import matcher
 from refex.python.matchers import syntax_matchers
 import six
@@ -65,35 +66,9 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
   def find_iter_parsed(self, parsed):
     """Returns all disjoint substitutions for parsed, in sorted order."""
     # (span, substitution) pairs
-    span_subs = [(sub.primary_span, sub)
+    return substitution.disjoint_substitutions(sub
                  for fixer in self.fixers
-                 for sub in fixer.find_iter_parsed(parsed)]
-    span_subs.sort(key=operator.itemgetter(0))
-
-    disjoint_subs = []
-
-    # loop over the substitutions, and only append each one after it's confirmed
-    # that it doesn't intersect with the next, or is smaller than the next.
-    # (So we don't add it until the next iteration of the loop, or after the
-    # loop is over.)
-    last_start = last_end = last_sub = None
-    for (start, end), sub in span_subs:
-      if last_sub is not None:
-        if start >= last_end:
-          # no collision!
-          disjoint_subs.append(last_sub)
-        else:
-          # they collide, keep the smallest as a heuristic to keep as many as
-          # we can.
-          if end - start > last_end - last_start:
-            continue
-
-      last_start = start
-      last_end = end
-      last_sub = sub
-    if last_sub is not None:
-      disjoint_subs.append(last_sub)
-    return disjoint_subs
+                 for sub in fixer.find_iter_parsed(parsed))
 
   def can_reapply(self):
     return True
