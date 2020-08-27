@@ -71,30 +71,30 @@ class Substitution(object):
   """
 
   #: Matched spans, keyed by label.
-  matched_spans = attr.ib()  # type: Mapping[str, Tuple[int, int]]
+  matched_spans = attr.ib(type=Mapping[str, Tuple[int, int]])
 
   #: The label for the location of the :class:`Substitution`.
-  primary_label = attr.ib()  # type: Text
+  primary_label = attr.ib(type=Text)
 
   #: A mapping from labels to replacement strings. If ``None``, then
   #: this is a match that may be a candidate for some substitution, but no
   #: replacements were specified.
-  replacements = attr.ib(default=None)  # type: Optional[Mapping[str, Text]]
+  replacements = attr.ib(default=None, type=Optional[Mapping[str, Text]])
 
   #: A message describing the issue.
-  message = attr.ib(default=None)  # type: Optional[Text]
+  message = attr.ib(default=None, type=Optional[Text])
 
   #: An URL describing the issue or fix in more detail.
-  url = attr.ib(default=None)  # type: Optional[Text]
+  url = attr.ib(default=None, type=Optional[Text])
 
   #: If ``False``, this is more or less a trivial change, the
   #: description of which may be dropped if this substitution is combined with
   #: a significant substitution.
-  significant = attr.ib(default=True)  # type: bool
+  significant = attr.ib(default=True, type=bool)
 
   #: A name to group fixes by. This can be used for separating out
   #: suggestions for statistics, suppressing categories of suggestions, etc.
-  category = attr.ib(default=None)  # type: Optional[Text]
+  category = attr.ib(default=None, type=Optional[Text])
 
   @property
   def primary_span(self) -> Tuple[int, int]:
