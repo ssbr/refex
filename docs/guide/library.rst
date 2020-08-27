@@ -44,4 +44,4 @@ to :func:`refex.cli.run`.
 Here's a complete example:
 
 .. literalinclude:: /../examples/example_binary.py
-   :lines: 15-
+   :lines: 14-
