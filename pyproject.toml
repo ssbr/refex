@@ -39,6 +39,21 @@ pytest = "^6"
 [tool.poetry.extras]
 docs = ["m2r", "sphinx"]
 
+# https://tox.readthedocs.io/
+[tool.tox]
+legacy_tox_ini = """
+
+[tox]
+envlist = py38, py37, py36, pypy36
+isolated_build = True
+
+[testenv]
+deps =
+    pytest
+commands =
+    pytest
+"""
+
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"

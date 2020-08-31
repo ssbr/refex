@@ -16,10 +16,7 @@ TODO: tox instead of system python
 To run the tests:
 
 ```sh
-$ python3 -m venv /tmp/refex-env
-$ source /tmp/refex-env/bin/activate
-$ poetry install
-$ poetry run python -m pytest
+$ pipx run tox -e py38
 ```
 
 Due to the use of the [absltest](https://abseil.io/docs/python/guides/testing)
