@@ -123,7 +123,7 @@ SIMPLE_PYTHON_FIXERS = [
         matcher=syntax_matchers.WithTopLevelImport(
             syntax_matchers.ExprPattern('yaml.load($s)'), 'yaml'),
         replacement=syntactic_template.PythonExprTemplate('yaml.safe_load($s)'),
-        url=None,
+        url='https://msg.pyyaml.org/load',
         category='refex.security.yaml_safe_load',
 
         # test / documentation data
@@ -136,7 +136,7 @@ SIMPLE_PYTHON_FIXERS = [
             syntax_matchers.ExprPattern('yaml.load_all($s)'), 'yaml'),
         replacement=syntactic_template.PythonExprTemplate(
             'yaml.safe_load_all($s)'),
-        url=None,
+        url='https://msg.pyyaml.org/load',
         category='refex.security.yaml_safe_load',
 
         # test / documentation data
