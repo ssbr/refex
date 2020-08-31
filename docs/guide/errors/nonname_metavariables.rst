@@ -22,9 +22,10 @@ Works::
         def $foo(): pass
         import $foo as $bar
 
-When debugging this error message, it can help to use :func:`ast.dump` with the
-`$`s removed to see if the AST produces a `Name` node there. For example, when
-debugging why ``obj.$foo`` or ``import $foo`` won't work, we could print these ASTs:
+When debugging this error message, it can help to use :func:`ast.dump` with
+every ``$`` removed to see if the AST produces a ``Name`` node there. For
+example, when debugging why ``obj.$foo`` or ``import $foo`` won't work, we could
+print these ASTs:
 
     >>> import ast
     >>> print(ast.dump(ast.parse('obj.foo').body[0]))
