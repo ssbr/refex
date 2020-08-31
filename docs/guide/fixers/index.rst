@@ -2,10 +2,11 @@ Fix Explanations
 ================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    merged
    attrib_default
+   literal_comparison
    superfluous_parens
    return_none
 
