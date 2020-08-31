@@ -7,5 +7,6 @@ Fix Explanations
    merged
    attrib_default
    superfluous_parens
+   return_none
 
 

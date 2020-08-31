@@ -105,7 +105,7 @@ _NON_NONE_RETURN = matcher_.DebugLabeledMatcher(
 _NONE_RETURNS_FIXERS = [
     fixer.SimplePythonFixer(
         message='If a function ever returns a value, all the code paths should have a return statement with a return value.',
-        url=None,
+        url='https://refex.readthedocs.io/en/latest/guide/fixers/return_none.html',
         significant=False,
         category=_NONE_RETURNS_CATEGORY,
         matcher=base_matchers.AllOf(
@@ -136,7 +136,7 @@ _NONE_RETURNS_FIXERS = [
     ),
     fixer.SimplePythonFixer(
         message='If a function never returns a value other than None, only a "bare return" should be used.',
-        url=None,
+        url='https://refex.readthedocs.io/en/latest/guide/fixers/return_none.html',
         significant=False,
         category=_NONE_RETURNS_CATEGORY,
         matcher=base_matchers.AllOf(
