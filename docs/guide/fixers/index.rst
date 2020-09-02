@@ -8,6 +8,7 @@ Fix Explanations
    attrib_default
    idiom
    literal_comparison
+   mutable_constants
    superfluous_parens
    return_none
 
