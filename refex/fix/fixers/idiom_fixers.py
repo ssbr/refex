@@ -37,7 +37,12 @@ _LOGGING_EXCEPTION_CATEGORY = 'idioms.logging.exception'
 _CONSTANT_MATCHER = base_matchers.MatchesRegex(r'[A-Z_\d]+')
 
 
-def idiom_fixer(old_expr, new_expr, category, url=None):
+def idiom_fixer(
+    old_expr,
+    new_expr,
+    category,
+    url='https://refex.readthedocs.io/en/latest/guide/fixers/idiom.html',
+):
   """Fixer for making expressions "clearer" / less convoluted.
 
   This also helps normalize them for other fixers to apply.

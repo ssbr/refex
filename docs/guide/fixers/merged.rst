@@ -13,4 +13,4 @@ iteratively try to apply as many fixes as it can in one go.
 The resulting message might be a bit confusing. We concatenate all the
 "important" messages together with their explanatory URLs. The "unimportant"
 ones are generally for trivial fixes that don't really matter in context -- e.g.
-a spelling correction.
+a spelling correction, or a minor :doc:`idiomatic <idiom>` rewording.

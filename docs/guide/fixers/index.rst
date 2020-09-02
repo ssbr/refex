@@ -6,6 +6,7 @@ Fix Explanations
 
    merged
    attrib_default
+   idiom
    literal_comparison
    superfluous_parens
    return_none
