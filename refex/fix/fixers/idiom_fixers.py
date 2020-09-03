@@ -265,7 +265,7 @@ def _in_exception_handler(identifier, on_conflict):
 _LOGGING_FIXERS = (
     fixer.SimplePythonFixer(
         message='Use logging.exception inside an except handler to automatically log the full stack trace of the error',
-        url=None,
+        url='https://refex.readthedocs.io/en/latest/guide/fixers/logging_exceptions.html',
         significant=True,
         category=_LOGGING_EXCEPTION_CATEGORY,
         matcher=base_matchers.AllOf(
@@ -305,7 +305,7 @@ _LOGGING_FIXERS = (
     ),
     fixer.SimplePythonFixer(
         message='logging.exception automatically records the message and full stack trace of the current exception, so it is redundant to pass the exception as the logging message. Instead, prefer to describe what action triggered the exception.',
-        url=None,
+        url='https://refex.readthedocs.io/en/latest/guide/fixers/logging_exceptions.html',
         significant=False,
         category=_LOGGING_EXCEPTION_CATEGORY,
         matcher=base_matchers.AllOf(
