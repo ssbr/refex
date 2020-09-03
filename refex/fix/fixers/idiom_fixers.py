@@ -72,7 +72,7 @@ def idiom_fixer(
 def _mutable_constant_fixer(matcher, replacement, **kwargs):
   return fixer.SimplePythonFixer(
       message='For constants, prefer immutable collections (like frozensets or tuples) to mutable collections (like sets or lists).',
-      url=None,
+      url='https://refex.readthedocs.io/en/latest/guide/fixers/mutable_constants.html',
       significant=False,
       category=_MUTABLE_CONSTANT_CATEGORY,
       matcher=matcher,
