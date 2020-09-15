@@ -21,15 +21,14 @@ import sys
 from absl.testing import absltest
 
 
+_EXECUTABLE = [sys.executable, 'examples/example_binary.py']
+
+
 class RefexBinaryTest(absltest.TestCase):
 
   def test_binary(self):
     f = self.create_tempfile(content='hello')
-    subprocess.check_call([
-        sys.executable,
-        'examples/example_binary.py',
-        f.full_path,
-    ])
+    subprocess.check_call(_EXECUTABLE + [f.full_path])
     self.assertEqual(f.read_text(), 'world')
 
 
