@@ -34,6 +34,7 @@
 
    meta/about
    meta/contributing
+   meta/credits
 
 
 
