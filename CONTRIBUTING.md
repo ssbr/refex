@@ -9,9 +9,9 @@ This project follows
 
 TODO: more explanation than just this.
 
-TODO: configuration for linter, yapf
-
-TODO: tox instead of system python
+TODO: configuration for linter, yapf, isort (pending issue
+[#1486](https://github.com/PyCQA/isort/issues/1486)), pre-commit hooks (?), and
+CI/github actions.
 
 To run the tests:
 
@@ -60,6 +60,6 @@ code inside of a function, vs e.g. function parameters that went on many lines.
 A lot of code in Refex appears to support Python 2, but if you try it, Refex
 quite obviously does not work on Python 2 -- or rather, it doesn't without a
 patch to support Python 3 annotation syntax. That patch is available from
-`pytype <https://github.com/google/pytype/blob/master/2.7_patches/python_2_7_type_annotations.diff>`_.
+[pytype](https://github.com/google/pytype/blob/master/2.7_patches/python_2_7_type_annotations.diff).
 
 Refex won't even support that much after Dec 2020.
