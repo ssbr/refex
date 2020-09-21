@@ -36,6 +36,7 @@ import errno
 import io
 import json
 import os
+import pkg_resources
 import re
 import sys
 import tempfile
@@ -316,8 +317,10 @@ def _absl_run_separate_argv(main_func, main_argv, absl_argv):
   app.run(absl_main, argv=absl_argv)
 
 
-def run(runner: RefexRunner, files: Iterable[Union[str, Tuple[str, str]]],
-        bug_report_url: Text):
+def run(runner: RefexRunner,
+        files: Iterable[Union[str, Tuple[str, str]]],
+        bug_report_url: Text,
+        version: Text = '<unspecified>'):
   """Performs console setup, and runs.
 
   Args:
@@ -326,6 +329,7 @@ def run(runner: RefexRunner, files: Iterable[Union[str, Tuple[str, str]]],
       different from the input file, a pair ``(input, output)`` may be passed
       instead of just ``inout``.
     bug_report_url: if a failure occurs, the URL to report bugs to.
+    version: The version to write to debug logs.
   """
   files = (
       (fname, fname) if isinstance(fname, str) else fname for fname in files)
@@ -333,7 +337,11 @@ def run(runner: RefexRunner, files: Iterable[Union[str, Tuple[str, str]]],
     with _report_bug_excepthook(bug_report_url):
       with colorama.colorama_text(strip=not runner.renderer.color):
         report_failures(
-            runner.rewrite_files(files), bug_report_url, runner.verbose)
+            runner.rewrite_files(files),
+            bug_report_url,
+            version,
+            runner.verbose,
+        )
   except KeyboardInterrupt:
     pass
 
@@ -342,7 +350,8 @@ def run_cli(argv,
             parser,
             get_runner,
             get_files,
-            bug_report_url=_BUG_REPORT_URL):
+            bug_report_url=_BUG_REPORT_URL,
+            version='<unspecified>'):
   """Creates a runner from command-line arguments, and executes it.
 
   Args:
@@ -355,6 +364,7 @@ def run_cli(argv,
     bug_report_url: An URL to present to the user to report bugs.
         As the error dump includes source code, corporate organizations may
         wish to override this with an internal bug report link for triage.
+    version: The version number to use in bug report logs and --version
   """
   with _report_bug_excepthook(bug_report_url):
     _add_rewriter_arguments(parser)
@@ -377,7 +387,7 @@ def run_cli(argv,
 
       def _run():
         """A wrapper function for profiler.runcall."""
-        run(runner, files, bug_report_url)
+        run(runner, files, bug_report_url, version)
 
       if options.profile_to:
         profiler = profile.Profile()
@@ -392,7 +402,7 @@ def run_cli(argv,
       pass
 
 
-def report_failures(failures, bug_report_url, verbose):
+def report_failures(failures, bug_report_url, version, verbose):
   """Reports :meth:`RefexRunner.rewrite_files` failures, if any.
 
   These are written to a debug log file (readable via the developer script
@@ -401,6 +411,8 @@ def report_failures(failures, bug_report_url, verbose):
   Args:
     failures: The return value of :meth:`RefexRunner.rewrite_files`.
     bug_report_url: An URL to present to the user to report bugs.
+    version: The version number to write to debug logs.
+    verbose: If true, writes failures to stderr in addition to debug logs.
   """
   if not failures:
     return
@@ -411,7 +423,7 @@ def report_failures(failures, bug_report_url, verbose):
       print(failure['traceback'], file=sys.stderr)
       print('', file=sys.stderr)
 
-  error_blob = dict(failures=failures, argv=sys.argv)
+  error_blob = dict(failures=failures, argv=sys.argv, version=version)
   if six.PY2:
     kw = {'mode': 'wb'}  # ok because of ensure_ascii=True below.
   else:
@@ -708,7 +720,7 @@ def _parse_options(argv, parser):
   return options
 
 
-def argument_parser():
+def argument_parser(version):
   """Creates an :class:`argparse.ArgumentParser` for the refex CLI."""
   if six.PY2:
     extra_kwargs = {}
@@ -735,6 +747,8 @@ def argument_parser():
                 Replace old-style set creation with set comprehensions.
           """),
       **extra_kwargs)
+
+  parser.add_argument('--version', action='version', version=version)
 
   match_options = parser.add_argument_group(
       'match arguments',
@@ -873,13 +887,25 @@ def files_from_options(runner, options) -> List[Tuple[str, str]]:
   return list(zip(options.files, options.files))
 
 
-def main(argv=None, bug_report_url=_BUG_REPORT_URL):
+def main(argv=None, bug_report_url=_BUG_REPORT_URL, version=None):
   """The refex main function."""
   if argv is None:
     argv = sys.argv
+  if version is None:
+    try:
+      version = pkg_resources.get_distribution('refex').version
+    except pkg_resources.DistributionNotFound as e:
+      # e.g. if vendored *cough* :(
+      version = 'DistributionNotFound: {e}\n{long_desc}'.format(
+          e=e,
+          long_desc='(refex needs to be installed to have version information)',
+      )
+  parser = argument_parser(version=version)
   run_cli(
       argv,
-      argument_parser(),
+      argument_parser(version=version),
       runner_from_options,
       files_from_options,
-      bug_report_url=bug_report_url)
+      bug_report_url=bug_report_url,
+      version=version,
+  )

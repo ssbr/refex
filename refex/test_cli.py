@@ -567,14 +567,16 @@ class MainTest(MainTestBase):
     # mock.ANY.
     for failure in error_dump[u'failures'].values():
       del failure[u'traceback']
-    self.assertEqual(error_dump, {
-        u'argv': sys.argv,
-        u'failures': {
-            f.full_path: {
-                u'content': u'42'
+    self.assertEqual(
+        error_dump, {
+            u'argv': sys.argv,
+            u'version': mock.ANY,
+            u'failures': {
+                f.full_path: {
+                    u'content': u'42'
+                }
             }
-        }
-    })
+        })
 
   def test_error_reading(self):
     f = self.create_tempfile(content='42')
