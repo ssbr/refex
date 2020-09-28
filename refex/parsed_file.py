@@ -27,7 +27,7 @@ from __future__ import unicode_literals
 
 import re
 
-from asttokens import line_numbers
+import asttokens
 import attr
 import cached_property
 from typing import Mapping, Optional, Iterable, Text
@@ -57,7 +57,7 @@ class ParsedFile(object):
 
   @cached_property.cached_property
   def line_numbers(self):
-    return line_numbers.LineNumbers(self.text)
+    return asttokens.LineNumbers(self.text)
 
 # Matches a trailing pragma in a piece of text in an re.search.
 _PRAGMA_RE = re.compile(
