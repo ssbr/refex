@@ -53,8 +53,31 @@ TODO: also describe `--mode=py`.
 
 ### Installation
 
-TODO: Installation instructions will go here as soon as this gets up on PyPI,
-hang tight!
+Refex can be run via [pipx](https://pipxproject.github.io/pipx/) for one-off use
+with control over the Python version:
+
+```sh
+$ pipx run refex --help
+```
+
+For longer-term use, or for use of Refex [as a library](https://refex.readthedocs.io/en/latest/guide/library.html),
+it is also pip-installable:
+
+```sh
+$ python3 -m venv my_env
+$ source my_env/bin/activate
+$ pip install refex
+$ refex --help
+```
+
+### Use
+
+The template syntax is almost exactly what it looks like, so the examples at the
+top of this page, in combination with the `--help` output, are intended to be
+enough to get started.
+
+For more details on the template syntax, see [Python Patterns and Templates](https://refex.readthedocs.io/en/latest/guide/patterns_templates.html). For details on how to use refex in your own code as a library, see [Using Refex as a Library](https://refex.readthedocs.io/en/latest/guide/library.html).
+
 
 ## Current status
 
