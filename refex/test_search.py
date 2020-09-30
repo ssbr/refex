@@ -93,10 +93,11 @@ class TrimRemovedStatementsTest(parameterized.TestCase):
       ('#block\n0xbad', '#block\n'),
       ('#block\n0xbad\n2', '#block\n2'),
       ('2;  #trailing\n0xbad\n3', '2;  #trailing\n3'),
-      # NOTE: Replacements ending a suite will strip off preceding comments.
-      ('2  #trailing\n0xbad', '2'),
-      ('2\n #block\n0xbad', '2'),
-      # Other suite types.
+      ('2  #trailing\n0xbad', '2  #trailing'),
+      ('2\n#leading\n0xbad', '2'),
+      ('0xbad\n#leading\n2', '#leading\n2'),
+      ('2  #trailing\n0xbad\n2', '2  #trailing\n2'),
+      # # Other suite types.
       ('if 1: pass\nelse: 0xbad', 'if 1: pass\nelse: pass'),
       ('for _ in []: 0xbad', 'for _ in []: pass'),
       ('while 1: 0xbad', 'while 1: pass'),

@@ -109,6 +109,7 @@ from refex.python import matcher
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
 import six
+import tokenize
 from typing import Dict, Iterable, Mapping, MutableMapping, MutableSequence, MutableSet, Optional, Pattern, Sequence, Text, Tuple, Union
 
 Span = Tuple[int, int]
@@ -888,8 +889,6 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
       suite_node = parsed.nav.get_parent(parsed.nav.get_parent(ast_match))
       at_module_level = isinstance(suite_node, ast.Module)
 
-      # TODO: Scan the intervening token range for comments, which
-      # should not be deleted!
       next_ = parsed.nav.get_next_sibling(ast_match)
       prev = parsed.nav.get_prev_sibling(ast_match)
       if next_ is None and prev is None:
@@ -903,7 +902,13 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
         if prev is None or id(prev) in removed_suite_prefix_nodes:
           removed_suite_prefix_nodes.add(id(ast_match))
         [start, _] = matched_spans[metavar]
-        matched_spans[metavar] = (start, next_.first_token.startpos)
+        # Avoid removing leading comments of the next_ statement.
+        tok = next_.first_token
+        prev_tok = lambda t: parsed.ast_tokens.prev_token(tok, include_extra=True)
+        while (prev_tok(tok).type in (tokenize.COMMENT, tokenize.NL) and
+               prev_tok(tok).start[0] != ast_match.last_token.end[0]):
+          tok = prev_tok(tok)
+        matched_spans[metavar] = (start, tok.startpos)
       else:  # prev is not None
         # If this statement is at the end of the suite, either handle the
         # case where all statements have been removed from the suite OR
@@ -915,7 +920,21 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
             replacements[metavar] = u'pass'
         elif id(prev) not in removed_nodes:
           [_, end] = matched_spans[metavar]
-          matched_spans[metavar] = (prev.last_token.endpos, end)
+          tok = prev.last_token
+          next_tok = lambda t: parsed.ast_tokens.next_token(tok, include_extra=True)
+          while (next_tok(tok).type == tokenize.COMMENT and
+                 next_tok(tok).start[0] == prev.last_token.end[0]):
+            tok = next_tok(tok)
+          matched_spans[metavar] = (tok.endpos, end)
+        else:
+          [_, end] = matched_spans[metavar]
+          tok = ast_match.first_token
+          prev_tok = lambda t: parsed.ast_tokens.prev_token(tok, include_extra=True)
+          while (prev_tok(tok).type in (tokenize.COMMENT, tokenize.NL) and
+                 prev_tok(tok).start[0] != prev.end[0]):
+            tok = prev_tok(tok)
+          matched_spans[metavar] = (tok.startpos, end)
+
         # Remove trailing semicolons to fix the (rare) case where the last
         # statement in a module is removed but leaves its semicolon
         # resulting in a syntax error.
