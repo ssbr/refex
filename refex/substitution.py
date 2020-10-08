@@ -51,12 +51,11 @@ from __future__ import print_function
 import collections
 import operator
 import re
+from typing import (FrozenSet, Iterable, List, Mapping, Optional, Text, Tuple,
+                    Union)
 
 import attr
 import six
-
-from typing import FrozenSet, Iterable, List, Mapping, Optional, Text, Tuple, Union
-
 
 # Only slightly structured category name: dot-separated, no empty intra-dot
 # sequences, no whitespace, doesn't begin with a -, and doesn't begin/end on a

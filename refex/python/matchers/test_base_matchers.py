@@ -26,11 +26,11 @@ from absl.testing import absltest
 from absl.testing import parameterized
 
 from refex import match
+from refex.python import evaluate
 from refex.python import matcher
 from refex.python import matcher_test_util
-from refex.python.matchers import base_matchers
 from refex.python.matchers import ast_matchers
-from refex.python import evaluate
+from refex.python.matchers import base_matchers
 
 _NOTHING = base_matchers.Unless(base_matchers.Anything())
 _FAKE_CONTEXT = matcher.MatchContext(matcher.parse_ast('', 'foo.py'))

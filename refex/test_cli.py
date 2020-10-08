@@ -20,6 +20,7 @@ from __future__ import print_function
 import argparse
 import contextlib
 import json
+from unittest import mock
 import os
 import re
 import sys
@@ -28,9 +29,9 @@ import unittest
 
 from absl.testing import absltest
 from absl.testing import parameterized
-from unittest import mock
-from refex import cli
 import six
+
+from refex import cli
 
 
 class ParseArgsLeftoversTest(absltest.TestCase):

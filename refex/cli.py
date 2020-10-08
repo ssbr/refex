@@ -36,22 +36,23 @@ import errno
 import io
 import json
 import os
-import pkg_resources
 import re
 import sys
 import tempfile
 import textwrap
 import traceback
-from typing import Dict, List, Iterable, Optional, Text, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Text, Tuple, Union
 
 from absl import app
 import attr
 import colorama
+import pkg_resources
+import six
+
 from refex import formatting
 from refex import search
 from refex.fix import find_fixer
 from refex.python import syntactic_template
-import six
 
 _IGNORABLE_ERRNO = frozenset([
     errno.ENOENT,  # file was removed after we went looking

@@ -80,21 +80,22 @@ import ast
 import collections
 import contextlib
 import copy
+import enum
 import functools
 import sys
 import tokenize
+from typing import Any, Dict, Iterator, Optional, Text
 import weakref
 
 from absl import logging
 import asttokens
 import attr
 import cached_property
-import enum
-from refex import match
-from refex import parsed_file
 import six
 from six.moves import reprlib
-from typing import Any, Dict, Iterator, Text, Optional
+
+from refex import match
+from refex import parsed_file
 
 _match = match  # when `match` is shadowed, e.g. class attributes.
 

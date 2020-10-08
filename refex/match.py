@@ -59,9 +59,9 @@ from __future__ import division
 # from __future__ import google_type_annotations
 from __future__ import print_function
 
-import attr
-
 from typing import Any, Tuple
+
+import attr
 
 
 @attr.s(frozen=True)

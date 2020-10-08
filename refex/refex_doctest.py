@@ -22,11 +22,14 @@ from __future__ import print_function
 import sys
 
 from absl.testing import absltest
+
 import refex.python.matcher_test_util  # so that it's found by _submodules: pylint: disable=unused-import
 import refex.search
 
+# isort: split
 # We put doctest after absltest so that it picks up the unittest monkeypatch.
-# Otherwise doctest tests aren't runnable at all.
+# Otherwise doctest tests aren't runnable at all with Bazel.
+
 import doctest
 
 

@@ -17,14 +17,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals  # for convenience
+
+import six
+
 from refex import formatting
 from refex.fix import fixer
 from refex.python import syntactic_template
 from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
-import six
-
 
 SIMPLE_PYTHON_FIXERS = []  # Disabled except when running in Python 2.
 

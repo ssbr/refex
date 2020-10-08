@@ -20,7 +20,6 @@ import sys
 
 from absl.testing import absltest
 
-
 _EXECUTABLE = [sys.executable, 'examples/example_binary.py']
 
 

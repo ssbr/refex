@@ -30,19 +30,17 @@ from __future__ import division
 # from __future__ import google_type_annotations
 from __future__ import print_function
 
-
 import textwrap
 
 from refex.python import error_strings
 from refex.python import matcher
 from refex.python import matchers
 from refex.python import semiliteral_eval
-
 # Actually collect all the matchers into the matchers module, so they can be
 # enumerated.
+import refex.python.matchers.ast_matchers  # pylint: disable=unused-import
 import refex.python.matchers.base_matchers  # pylint: disable=unused-import
 import refex.python.matchers.lexical_matchers  # pylint: disable=unused-import
-import refex.python.matchers.ast_matchers  # pylint: disable=unused-import
 import refex.python.matchers.syntax_matchers  # pylint: disable=unused-import
 
 

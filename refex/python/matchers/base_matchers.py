@@ -70,13 +70,14 @@ from __future__ import division
 from __future__ import print_function
 
 import re
+from typing import Container, List
 import weakref
 
 import attr
 import cached_property
+
 from refex import match
 from refex.python import matcher
-from typing import Container, List
 
 
 @matcher.safe_to_eval

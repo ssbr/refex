@@ -16,21 +16,20 @@
 ------------------------
 """
 
+# No portable raw unicode literal exists without unicode_literals.
+# see https://stackoverflow.com/questions/33027281
 from __future__ import absolute_import
 from __future__ import division
 # from __future__ import google_type_annotations
 from __future__ import print_function
-
-# No portable raw unicode literal exists without unicode_literals.
-# see https://stackoverflow.com/questions/33027281
 from __future__ import unicode_literals
 
 import re
+from typing import Iterable, Mapping, Optional, Text
 
 import asttokens
 import attr
 import cached_property
-from typing import Mapping, Optional, Iterable, Text
 
 
 @attr.s(frozen=True, eq=True, order=False)

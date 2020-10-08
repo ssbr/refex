@@ -96,10 +96,15 @@ import ast
 import itertools
 import re
 import sys
+from typing import (Dict, Iterable, Mapping, MutableMapping, MutableSequence,
+                    MutableSet, Optional, Pattern, Sequence, Text, Tuple,
+                    Union)
 
 from absl import logging
 import attr
 import cached_property
+import six
+
 from refex import formatting
 from refex import match
 from refex import parsed_file
@@ -108,8 +113,6 @@ from refex.python import evaluate
 from refex.python import matcher
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
-import six
-from typing import Dict, Iterable, Mapping, MutableMapping, MutableSequence, MutableSet, Optional, Pattern, Sequence, Text, Tuple, Union
 
 Span = Tuple[int, int]
 # TODO(b/118783544): Only string keys.

@@ -20,16 +20,17 @@ from __future__ import print_function
 
 import abc
 import operator
+from typing import Callable, List, Mapping, Optional, Text, TypeVar
 
 import attr
+import six
+
 from refex import formatting
 from refex import future_string
 from refex import search
 from refex import substitution
 from refex.python import matcher
 from refex.python.matchers import syntax_matchers
-import six
-from typing import Callable, List, Mapping, Optional, Text, TypeVar
 
 
 class ParsedPythonFixer(

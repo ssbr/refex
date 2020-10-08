@@ -22,6 +22,7 @@ import collections
 from absl.testing import absltest
 from absl.testing import parameterized
 import colorama
+
 from refex import formatting
 from refex import match
 from refex import parsed_file

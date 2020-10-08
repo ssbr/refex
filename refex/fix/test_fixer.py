@@ -18,22 +18,22 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals  # for convenience.
 
-import re
 from unittest import mock
+import re
 
 from absl.testing import absltest
 from absl.testing import parameterized
 import attr
+
 from refex import formatting
 from refex import future_string
 from refex import search
 from refex import substitution
+from refex.fix import find_fixer
+from refex.fix import fixer
 from refex.python import syntactic_template
 from refex.python.matchers import ast_matchers
 from refex.python.matchers import syntax_matchers
-
-from refex.fix import find_fixer
-from refex.fix import fixer
 
 
 def _search_replace_fixer(search_expr, replace, message=None, url='', **kwargs):

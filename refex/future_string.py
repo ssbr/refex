@@ -49,10 +49,9 @@ from __future__ import print_function
 
 import collections
 import string
+from typing import Any, Mapping, Text
 
 import six
-from typing import Any, Text, Mapping
-
 
 # For refex_doctest.py
 # The examples are specific to Python 2.

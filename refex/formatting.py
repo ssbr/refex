@@ -75,7 +75,6 @@ import sre_parse
 import subprocess
 import sys
 import tempfile
-
 import typing
 from typing import Any, Iterable, Mapping, Optional, Text, Tuple
 
@@ -88,7 +87,6 @@ from refex import future_string
 from refex import match as _match
 from refex import parsed_file
 from refex import substitution
-
 
 _DEFAULT_STYLES = (
     colorama.Style.BRIGHT + colorama.Fore.YELLOW,
