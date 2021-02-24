@@ -20,17 +20,17 @@ from __future__ import division
 from __future__ import print_function
 
 import ast
-from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
-
+from unittest import mock
 from refex import match
 from refex.python import evaluate
 from refex.python import matcher
 from refex.python import matcher_test_util
 from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
+from six.moves import range
 
 _NOTHING = base_matchers.Unless(base_matchers.Anything())
 _FAKE_CONTEXT = matcher.MatchContext(matcher.parse_ast('', 'foo.py'))
