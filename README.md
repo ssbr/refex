@@ -81,10 +81,6 @@ For more details on the template syntax, see [Python Patterns and Templates](htt
 
 ## Current status
 
-NOTE: Right now, the project is in the process of initial upload to github,
-PyPI, etc., so please don't publicize it widely. The initial release will be
-a `0.1` release.
-
 **Stable:**
 
 The APIs documented at https://refex.readthedocs.io/ are expected to remain
