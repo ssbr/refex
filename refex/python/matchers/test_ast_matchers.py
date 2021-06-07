@@ -162,10 +162,11 @@ class ConstantTest(parameterized.TestCase):
     self.assertIsNone(ast_matchers.Str().match(
         matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
+  @unittest.skipIf(six.PY2, '`...` is python 3 only')
   def test_ellipsis(self):
-    parsed = matcher.parse_ast('x[...]', '<string>')
+    parsed = matcher.parse_ast('...', '<string>')
     self.assertIsNotNone(ast_matchers.Ellipsis().match(
-        matcher.MatchContext(parsed), parsed.tree.body[0].value.slice.value))
+        matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
   def test_ellipsis_non_ellipsis(self):
     parsed = matcher.parse_ast('1', '<string>')

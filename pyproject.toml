@@ -57,7 +57,7 @@ legacy_tox_ini = """
 
 [tox]
 isolated_build = True
-envlist = py38, py37, py36, pypy36
+envlist = py39, py38, py37, py36, pypy37, pypy36
 
 [testenv]
 deps =
