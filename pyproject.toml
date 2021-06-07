@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "refex"
-version = "0.1"
+version = "0.1.1"
 description = "A syntactically-aware search and replace tool."
 authors = ["Devin Jeanpierre <jeanpierreda@gmail.com>"]
 
