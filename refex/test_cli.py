@@ -388,7 +388,8 @@ class MainTest(MainTestBase):
   def test_sub_noiterate(self, extra_args):
     f = self.create_tempfile(content='foo')
     _ = self.main(
-        ['--mode=py.expr', 'foo', '--sub=wrap(foo)', '-i', f.full_path] + extra_args)
+        ['--mode=py.expr', 'foo', '--sub=wrap(foo)', '-i', f.full_path] +
+        extra_args)
     self.assertEqual(f.read_text(), 'wrap(foo)')
 
   @parameterized.parameters(
@@ -398,7 +399,8 @@ class MainTest(MainTestBase):
   def test_sub_iterate(self, extra_args):
     f = self.create_tempfile(content='foo')
     _ = self.main(
-        ['--mode=py.expr', 'foo', '--sub=wrap(foo)', '-i', f.full_path] + extra_args)
+        ['--mode=py.expr', 'foo', '--sub=wrap(foo)', '-i', f.full_path] +
+        extra_args)
     self.assertStartsWith(f.read_text(), 'wrap(wrap(wrap(')
     self.assertEndsWith(f.read_text(), ')))')
 

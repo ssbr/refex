@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-:mod:`~refex.python.matchers.syntax_matchers`
+""":mod:`~refex.python.matchers.syntax_matchers`
 ---------------------------------------------
 
 High level pattern matchers on AST nodes.
@@ -169,9 +168,9 @@ def _rewrite_submatchers(pattern, restrictions):
   pattern, variables = _remap_macro_variables(pattern)
   incorrect_variables = set(restrictions) - set(variables)
   if incorrect_variables:
-    raise KeyError(
-        'Some variables specified in restrictions were missing. '
-        'Did you misplace a "$"? Missing variables: %r' % incorrect_variables)
+    raise KeyError('Some variables specified in restrictions were missing. '
+                   'Did you misplace a "$"? Missing variables: %r' %
+                   incorrect_variables)
 
   submatchers = {}
   for old_name, new_name in variables.items():
@@ -253,10 +252,13 @@ def _ast_pattern(tree, variables):
     if tree.id in variables:
       return variables[tree.id]
   return getattr(ast_matchers,
-                 type(tree).__name__)(**{
-                     field: _ast_pattern(getattr(tree, field), variables)
-                     for field in type(tree)._fields
-                 })
+                 type(tree).__name__)(
+                     **{
+                         field: _ast_pattern(getattr(tree, field), variables)
+                         for field in type(tree)._fields
+                         # Filter out variable ctx.
+                         if field != 'ctx' or not isinstance(tree, ast.Name)
+                     })
 
 
 def _verify_variables(tree, variables):
@@ -338,7 +340,8 @@ class ExprPattern(_BaseAstPattern):
   """An AST matcher for a pattern expression.
 
   `ExprPattern` creates a matcher that exactly matches a given AST, but also
-  allows placeholders. For example, this will match any addition of two variables
+  allows placeholders. For example, this will match any addition of two
+  variables
   named literally foo and bar::
 
       ExprPattern('foo + bar')
@@ -347,7 +350,8 @@ class ExprPattern(_BaseAstPattern):
 
       ExprPattern('$foo + $bar')
 
-  In addition, whatever expressions $foo or $bar matched will be a bound variable
+  In addition, whatever expressions $foo or $bar matched will be a bound
+  variable
   in the match (under 'foo' and 'bar').
 
   Args:
@@ -452,8 +456,8 @@ class StmtFromFunctionPattern(matcher.Matcher):
       raise ValueError('Function {} appears to have invalid syntax. Is it a'
                        ' lambda?'.format(self.func.__name__))
     actual_body = parsed.body[0].body
-    if (isinstance(actual_body[0], ast.Expr)
-        and isinstance(actual_body[0].value, ast.Str)):
+    if (isinstance(actual_body[0], ast.Expr) and
+        isinstance(actual_body[0].value, ast.Str)):
 
       # Strip the docstring, if it exists.
       actual_body = actual_body[1:]
@@ -474,7 +478,7 @@ class StmtFromFunctionPattern(matcher.Matcher):
         _ast_pattern(actual_body[0], bindings),
         on_conflict=matcher.BindConflict.MERGE,
         on_merge=matcher.BindMerge.KEEP_LAST,
-        )
+    )
 
   def _match(self, context, candidate):
     return self._ast_matcher.match(context, candidate)

@@ -149,10 +149,15 @@ class PythonStmtTemplateTest(parameterized.TestCase):
   )
   def test_assignment(self, template):
     template = syntactic_template.PythonStmtTemplate(template)
-    [matchinfo] = matcher.find_iter(
-        base_matchers.Bind('x', ast_matchers.Name()), matcher.parse_ast('x'))
-    substituted = template.substitute_match(None, None, {'x': matchinfo.match})
-    self.assertEqual(substituted, template.template.replace('$x', 'x'))
+    # Test with different values of `ctx` for the variable being substituted.
+    for variable_source in 'x = 1', 'x':
+      with self.subTest(variable_souce=variable_source):
+        [matchinfo] = matcher.find_iter(
+            base_matchers.Bind('x', ast_matchers.Name()),
+            matcher.parse_ast(variable_source))
+        substituted = template.substitute_match(None, None,
+                                                {'x': matchinfo.match})
+        self.assertEqual(substituted, template.template.replace('$x', 'x'))
 
 
 if __name__ == '__main__':
