@@ -32,7 +32,7 @@ class PythonPatternTest(parameterized.TestCase):
     tokenized, _ = python_pattern.token_pattern(pattern)
     self.assertEqual(tokenize.untokenize(tokenized), pattern)
 
-  @parameterized.parameters('$x', 'foo + $x', 'import $x', '$x "$y"')
+  @parameterized.parameters('$x', 'foo + $x', 'import $x', '$x "$y"', '$x = 0')
   def test_simple_pattern(self, pattern):
     tokenized, [metavar_i] = python_pattern.token_pattern(pattern)
     # token text is 'x' -- that's the only variable in the pattern.

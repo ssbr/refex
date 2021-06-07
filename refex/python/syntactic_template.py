@@ -74,7 +74,10 @@ class _LexicalTemplate(object):
     # Because we have frozen=True, creating values for _tokens and _var_to_i
     # is a little complex, and requires invoking object.__setattr__.
     tokenized, metavar_indices = python_pattern.token_pattern(self.template)
-    var_to_i = {tokenized[i][1]: i for i in metavar_indices}
+    var_to_i = {}
+    for i in metavar_indices:
+      var = tokenized[i][1]
+      var_to_i.setdefault(var, []).append(i)
     object.__setattr__(self, '_tokens', tokenized)
     object.__setattr__(self, '_var_to_i', var_to_i)
     object.__setattr__(self, 'variables', six.viewkeys(var_to_i))
@@ -103,14 +106,15 @@ class _LexicalTemplate(object):
                   tokens, replacements)
     for var, new in six.iteritems(replacements):
       try:
-        i = self._var_to_i[var]
+        all_i = self._var_to_i[var]
       except KeyError:
         # overspecified: a replacement for a variable not in the template.
         continue
       free_vars.remove(var)
-      tok = list(tokens[i])
-      tok[1] = new
-      tokens[i] = tuple(tok)
+      for i in all_i:
+        tok = list(tokens[i])
+        tok[1] = new
+        tokens[i] = tuple(tok)
     if free_vars:
       raise KeyError(next(iter(free_vars)))
     return tokenize.untokenize(tokens)
@@ -304,7 +308,7 @@ class _BasePythonTemplate(formatting.Template):
           'Bug in Python formatter? Even "safe" formatting of Python template '
           'produced an incorrect and different AST, so it must be discarded: '
           ' template=%r, substitute(matches for %r) -> %r' %
-          (self.template, stringified_matches, replacement))
+          (self.template, stringified_matches, replacement ))
 
     for k, bound in m.bindings.items():
       v = bound.value

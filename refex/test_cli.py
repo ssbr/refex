@@ -729,6 +729,13 @@ class MainTest(MainTestBase):
         ['--mode=py.stmt', 'x = $f()', '--no-filename', f.full_path])
     self.assertEqual(output, 'x = foo()\n')
 
+  def test_py_stmt_sub(self):
+    f = self.create_tempfile(content='a = b\n')
+
+    output = self.main(
+        ['--mode=py.stmt', '$x = $y', '--sub', '$y = $x', '-i', f.full_path])
+    self.assertEqual(f.read_text(), 'b = a\n')
+
   def test_py_ez_sub(self):
     """$f and $foo will be treated as separate variables."""
     for mode in ['py.expr', 'py.stmt']:
