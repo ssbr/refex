@@ -138,5 +138,22 @@ class PythonTemplateTest(parameterized.TestCase):
                                 {'bound': matchinfo.match})
 
 
+class PythonStmtTemplateTest(parameterized.TestCase):
+
+  @parameterized.parameters(
+      '$x = $x',
+      'a, $x = $x',
+      '(a, $x) = $x',
+      '[a, $x] = $x',
+      '$x.foo = $x',
+  )
+  def test_assignment(self, template):
+    template = syntactic_template.PythonStmtTemplate(template)
+    [matchinfo] = matcher.find_iter(
+        base_matchers.Bind('x', ast_matchers.Name()), matcher.parse_ast('x'))
+    substituted = template.substitute_match(None, None, {'x': matchinfo.match})
+    self.assertEqual(substituted, template.template.replace('$x', 'x'))
+
+
 if __name__ == '__main__':
   absltest.main()
