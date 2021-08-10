@@ -583,16 +583,18 @@ def _add_rewriter_arguments(parser):
       action='store_const',
       dest='color',
       const='never')
+  parser.add_argument(
+      '-l',
+      action='store_true',
+      default=False,
+      dest='list_files',
+      help='Print out only the matched file names. If substitution is performed (e.g. with `--sub`), this corresponds with only the changed files.')
+
   grep_options.add_argument(
       '--force-enable',
       action='store_true',
       default=False,
       help='Ignore pragmas that disable substitutions.')
-  grep_options.add_argument('-l',
-                            action='store_true',
-                            default=False,
-                            dest='list_files',
-                            help='Only print out file names, if grepping.')
   grep_options.add_argument(
       '--format',
       type=six.text_type,
