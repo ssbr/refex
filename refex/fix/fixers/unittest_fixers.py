@@ -100,6 +100,9 @@ SIMPLE_PYTHON_FIXERS = [
     assert_alias_fixer('self.failIfAlmostEqual', 'self.assertNotAlmostEqual'),
     assert_alias_fixer('self.assertNotAlmostEquals',
                        'self.assertNotAlmostEqual'),
+    assert_alias_fixer('self.assertRegexpMatches', 'self.assertRegex'),
+    assert_alias_fixer('self.assertNotRegexpMatches', 'self.assertNotRegex'),
+    assert_alias_fixer('self.assertRaisesRegexp', 'self.assertRaisesRegex'),
 
     # Assertion message fixers:
     # assertFalse(...) is excluded for now because will change which method is
