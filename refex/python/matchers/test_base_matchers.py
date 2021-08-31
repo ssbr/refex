@@ -273,6 +273,27 @@ class AllOfTest(absltest.TestCase):
             match.ObjectMatch(1),
             {'foo': matcher.BoundValue(match.ObjectMatch(1))}))
 
+  def test_type_filter_empty(self):
+    self.assertIsNone(base_matchers.AllOf().type_filter)
+
+  def test_type_filter_nonempty(self):
+    self.assertEqual(
+        base_matchers.AllOf(
+            base_matchers.TypeIs(int),
+            base_matchers.TypeIs(int),
+        ).type_filter,
+        frozenset({int}),
+    )
+
+  def test_type_filter_nonempty_disjoint(self):
+    self.assertEqual(
+        base_matchers.AllOf(
+            base_matchers.TypeIs(int),
+            base_matchers.TypeIs(float),
+        ).type_filter,
+        frozenset({}),
+    )
+
 
 class AnyOfTest(absltest.TestCase):
 
@@ -312,6 +333,27 @@ class AnyOfTest(absltest.TestCase):
         base_matchers.AllOf(
             base_matchers.Bind('foo', _NOTHING),
             base_matchers.Bind('bar', _NOTHING)).match(_FAKE_CONTEXT, 1))
+
+  def test_type_filter_empty(self):
+    self.assertEqual(base_matchers.AnyOf().type_filter, frozenset())
+
+  def test_type_filter_nonempty(self):
+    self.assertEqual(
+        base_matchers.AnyOf(
+            base_matchers.TypeIs(int),
+            base_matchers.TypeIs(int),
+        ).type_filter,
+        frozenset({int}),
+    )
+
+  def test_type_filter_nonempty_disjoint(self):
+    self.assertEqual(
+        base_matchers.AnyOf(
+            base_matchers.TypeIs(int),
+            base_matchers.TypeIs(float),
+        ).type_filter,
+        frozenset({int, float}),
+    )
 
 
 class UnlessTest(absltest.TestCase):
@@ -541,8 +583,8 @@ class ItemsAreTest(absltest.TestCase):
             {'a': matcher.BoundValue(match.ObjectMatch(1))}))
 
 
-class RecursivelyWrappedTest(
-    matcher_test_util.MatcherTestCase, parameterized.TestCase):
+class RecursivelyWrappedTest(matcher_test_util.MatcherTestCase,
+                             parameterized.TestCase):
 
   @parameterized.parameters([
       ('5', ['5']),
@@ -606,8 +648,8 @@ class RecursivelyWrappedTest(
       self.assertNotEqual(example_matcher, different_matcher)
 
 
-class MaybeWrappedTest(
-    matcher_test_util.MatcherTestCase, parameterized.TestCase):
+class MaybeWrappedTest(matcher_test_util.MatcherTestCase,
+                       parameterized.TestCase):
 
   @parameterized.parameters([
       ('5', ['5']),
@@ -629,8 +671,8 @@ class InLineTest(matcher_test_util.MatcherTestCase):
   def test_match_lines(self):
     source = 'a = b\nc = d\ne = f\ng = h'
     self.assertEqual(
-        self.get_all_match_strings(
-            base_matchers.InLines(lines=[2, 4]), source), ['c = d', 'g = h'])
+        self.get_all_match_strings(base_matchers.InLines(lines=[2, 4]), source),
+        ['c = d', 'g = h'])
 
 
 if __name__ == '__main__':

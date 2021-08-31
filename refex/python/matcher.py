@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pyformat: disable
 """
 :mod:`refex.python.matcher`
 ===========================
@@ -69,6 +70,7 @@ Concrete Matchers
 
 .. autoclass:: ImplicitEquals
 """
+# pyformat: enable
 
 from __future__ import absolute_import
 from __future__ import division
@@ -177,7 +179,8 @@ _IS_SUBMATCHER_ATTRIB = __name__ + '._IS_SUBMATCHER_ATTRIB'
 _IS_SUBMATCHER_LIST_ATTRIB = __name__ + '._IS_SUBMATCHER_LIST_ATTRIB'
 
 
-def submatcher_attrib(*args, **kwargs):  # TODO: make walk a kwarg when Py2 support is dropped.
+def submatcher_attrib(
+    *args, **kwargs):  # TODO: make walk a kwarg when Py2 support is dropped.
   """Creates an attr.ib that is marked as a submatcher.
 
   This will cause the matcher to be automatically walked as part of the
@@ -188,6 +191,7 @@ def submatcher_attrib(*args, **kwargs):  # TODO: make walk a kwarg when Py2 supp
     *args: Forwarded to attr.ib.
     walk: Whether or not to walk to accumulate .bind_variables.
     **kwargs: Forwarded to attr.ib.
+
   Returns:
     An attr.ib()
   """
@@ -197,7 +201,8 @@ def submatcher_attrib(*args, **kwargs):  # TODO: make walk a kwarg when Py2 supp
   return attr.ib(*args, **kwargs)
 
 
-def submatcher_list_attrib(*args, **kwargs):  # TODO: make walk a kwarg when Py2 support is dropped.
+def submatcher_list_attrib(
+    *args, **kwargs):  # TODO: make walk a kwarg when Py2 support is dropped.
   """Creates an attr.ib that is marked as an iterable of submatchers.
 
   This will cause the matcher to be automatically walked as part of the
@@ -208,6 +213,7 @@ def submatcher_list_attrib(*args, **kwargs):  # TODO: make walk a kwarg when Py2
     *args: Forwarded to attr.ib.
     walk: Whether or not to walk to accumulate .bind_variables.
     **kwargs: Forwarded to attr.ib.
+
   Returns:
     An attr.ib()
   """
@@ -231,7 +237,7 @@ class PythonParsedFile(parsed_file.ParsedFile):
   """Preprocessed file information, including the AST etc."""
   ast_tokens = attr.ib(type=asttokens.ASTTokens)
   tree = attr.ib(type=ast.Module)
-  nav = attr.ib(type="AstNav")
+  nav = attr.ib(type='AstNav')
 
 
 @attr.s(frozen=True, eq=False)
@@ -397,6 +403,7 @@ class _CallableVariant(object):
   def __call__(self, *args, **kwargs):
     return self._f(*args, **kwargs)
 
+
 @register_enum
 class BindConflict(enum.Enum):
   """What to do if two bindings share the same name.
@@ -534,21 +541,19 @@ class BoundValue(object):
   Attributes:
     value: A value that has a bound name somewhere.
     on_conflict: A strategy from :class:`BindConflict` for merging two bound
-        values. Defaults to ``MERGE``.
+      values. Defaults to ``MERGE``.
     on_merge: A strategy from :class:`BindMerge` for how to merge. Defaults to
-        ``KEEP_LAST``.
+      ``KEEP_LAST``.
   """
 
   value = attr.ib(type=Any)
   on_conflict = attr.ib(
       default=None,
-      converter=attr.converters.default_if_none(
-          BindConflict.MERGE),
+      converter=attr.converters.default_if_none(BindConflict.MERGE),
       type=BindConflict)
   on_merge = attr.ib(
       default=None,
-      converter=attr.converters.default_if_none(
-          BindMerge.KEEP_LAST),
+      converter=attr.converters.default_if_none(BindMerge.KEEP_LAST),
       type=BindMerge)
 
   def rebind(self, on_conflict=None, on_merge=None):
@@ -729,6 +734,11 @@ class Matcher(six.with_metaclass(abc.ABCMeta)):
     for matcher in self._submatchers():
       bindings |= matcher.bind_variables
     return frozenset(bindings)
+
+  #: The types of objects that may be matched, as a frozenset.
+  #:
+  #: None if any type is eligible for matching.
+  type_filter = None
 
 
 @attr.s(frozen=True)
@@ -1123,9 +1133,11 @@ def _pragmas(tokens):
       # and therefore any pragmas are just for this line.
       fresh_line = False
 
+
 _parsed_ast_cache = weakref.WeakValueDictionary()
 
-def parse_ast(source_code: str, filename:str ='<string>') -> PythonParsedFile:
+
+def parse_ast(source_code: str, filename: str = '<string>') -> PythonParsedFile:
   """Parses an AST in a way that supports the built-in matchers.
 
   This includes auxiliary information / post-processing / etc. which are not
@@ -1177,7 +1189,8 @@ def parse_ast(source_code: str, filename:str ='<string>') -> PythonParsedFile:
   return parsed
 
 
-def find_iter(matcher: Matcher, parsed: PythonParsedFile) -> Iterator[MatchInfo]:
+def find_iter(matcher: Matcher,
+              parsed: PythonParsedFile) -> Iterator[MatchInfo]:
   """Finds all matches in an AST.
 
   This is analogous to :func:`re.finditer`. If a node is matched, then any
@@ -1195,7 +1208,10 @@ def find_iter(matcher: Matcher, parsed: PythonParsedFile) -> Iterator[MatchInfo]
   while stack:
     next_node = stack.pop()
     try:
-      match_info = matcher.match(MatchContext(parsed), next_node)
+      if matcher.type_filter is None or type(next_node) in matcher.type_filter:
+        match_info = matcher.match(MatchContext(parsed), next_node)
+      else:
+        match_info = None
     except MatchError as e:
       print('Matcher failed: {}'.format(e), file=sys.stderr)
       continue

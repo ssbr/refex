@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pyformat: disable
 """
 :mod:`~refex.python.matchers.lexical_matchers`
 ----------------------------------------------
@@ -22,6 +23,7 @@ filters on lexical matches.
 .. autoclass:: NoComments
 
 """
+# pyformat: enable
 
 from __future__ import absolute_import
 from __future__ import division
@@ -30,6 +32,7 @@ from __future__ import print_function
 import tokenize
 
 import attr
+import cached_property
 
 from refex.python import matcher
 
@@ -51,6 +54,10 @@ class HasComments(matcher.Matcher):
     else:
       return None
 
+  @cached_property.cached_property
+  def type_filter(self):
+    return self._submatcher.type_filter
+
 
 @matcher.safe_to_eval
 @attr.s(frozen=True)
@@ -69,6 +76,10 @@ class NoComments(matcher.Matcher):
     else:
       return result
 
+  @cached_property.cached_property
+  def type_filter(self):
+    return self._submatcher.type_filter
+
 
 # TODO(b/64560910): Yield all the comments so that matchers can operate on them
 # and check what they contain.
@@ -81,8 +92,8 @@ def _result_has_comments(context, m, result):
     # is no.
     return False
   if not isinstance(result.match, matcher.LexicalMatch):
-    raise TypeError(
-        'Expected a LexicalMatch from matcher (%r), got: %r' % (m, result))
+    raise TypeError('Expected a LexicalMatch from matcher (%r), got: %r' %
+                    (m, result))
 
   first_token = result.match.first_token
   last_token = result.match.last_token

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pyformat: disable
 """
 :mod:`~refex.python.matchers.base_matchers`
 -------------------------------------------
@@ -50,6 +51,8 @@ Python Data Structure Matchers
 
 .. autoclass:: Equals
 
+.. autoclass:: TypeIs
+
 .. autoclass:: Contains
 
 .. autoclass:: HasItem
@@ -64,6 +67,7 @@ File Content Matchers
 .. autoclass:: FileMatchesRegex
 
 """
+# pyformat: enable
 
 from __future__ import absolute_import
 from __future__ import division
@@ -134,6 +138,18 @@ class AllOf(_NAryMatcher):
     for submatcher in self._matchers:
       yield submatcher.match(context, candidate)
 
+  @cached_property.cached_property
+  def type_filter(self):
+    types = None
+    for submatcher in self._matchers:
+      if submatcher.type_filter is None:
+        continue
+      if types is None:
+        types = submatcher.type_filter
+      else:
+        types &= submatcher.type_filter
+    return types
+
 
 @matcher.safe_to_eval
 class AnyOf(_NAryMatcher):
@@ -145,6 +161,15 @@ class AnyOf(_NAryMatcher):
       if extra is not None:
         return extra
     return None
+
+  @cached_property.cached_property
+  def type_filter(self):
+    types = set()
+    for submatcher in self._matchers:
+      if submatcher.type_filter is None:
+        return None
+      types |= submatcher.type_filter
+    return frozenset(types)
 
 
 @matcher.safe_to_eval
@@ -161,6 +186,9 @@ class Unless(matcher.Matcher):
     else:
       return None
 
+  # TODO: Maybe, someday, do stratified datalog with negation.
+  type_filter = None
+
 
 @matcher.safe_to_eval
 @attr.s(frozen=True)
@@ -174,9 +202,9 @@ class Bind(matcher.Matcher):
     on_conflict: A conflict resolution strategy. Must be a member of
       :class:`matcher.BindConflict <refex.python.matcher.BindConflict>`, or
       ``None`` for the default strategy (``ACCEPT``).
-    on_merge: A merge strategy. Must be a member of
-      :class:`matcher.BindMerge <refex.python.matcher.BindMerge>`,
-      or None for the default strategy (``KEEP_LAST``).
+    on_merge: A merge strategy. Must be a member of :class:`matcher.BindMerge
+      <refex.python.matcher.BindMerge>`, or None for the default strategy
+      (``KEEP_LAST``).
   """
   _NAME_REGEX = re.compile(r'\A(?!__)[a-zA-Z_]\w*\Z')
 
@@ -231,6 +259,10 @@ class Bind(matcher.Matcher):
   def bind_variables(self):
     return frozenset([self.name]) | self._submatcher.bind_variables
 
+  @cached_property.cached_property
+  def type_filter(self):
+    return self._submatcher.type_filter
+
 
 # NOT safe_to_eval!
 class SystemBind(Bind):
@@ -254,11 +286,11 @@ class Rebind(matcher.Matcher):
   Args:
     submatcher: The matcher whose bindings to rewrite.
     on_conflict: A conflict resolution strategy. Must be a member of
-        :class:`matcher.BindConflict <refex.python.matcher.BindConflict>`, or
-        ``None`` if ``on_conflict`` is not to be changed.
-    on_merge: A merge strategy. Must be a member of
-        :class:`matcher.BindMerge <refex.python.matcher.BindMerge>`, or ``None``
-        if ``on_merge`` is not to be changed.
+      :class:`matcher.BindConflict <refex.python.matcher.BindConflict>`, or
+      ``None`` if ``on_conflict`` is not to be changed.
+    on_merge: A merge strategy. Must be a member of :class:`matcher.BindMerge
+      <refex.python.matcher.BindMerge>`, or ``None`` if ``on_merge`` is not to
+      be changed.
   """
 
   _submatcher = matcher.submatcher_attrib(default=Anything())
@@ -277,10 +309,14 @@ class Rebind(matcher.Matcher):
     return attr.evolve(
         result,
         bindings={
-            metavar: bind.rebind(
-                on_conflict=self._on_conflict, on_merge=self._on_merge)
+            metavar:
+            bind.rebind(on_conflict=self._on_conflict, on_merge=self._on_merge)
             for metavar, bind in result.bindings.items()
         })
+
+  @cached_property.cached_property
+  def type_filter(self):
+    return self._submatcher.type_filter
 
 
 ######################
@@ -307,6 +343,10 @@ class _Recurse(matcher.Matcher):
 
   def __repr__(self):
     return '%s(...)' % type(self).__name__
+
+  @cached_property.cached_property
+  def type_filter(self):
+    return self._recurse_to.type_filter
 
 
 @matcher.safe_to_eval
@@ -348,6 +388,7 @@ class RecursivelyWrapped(AnyOf):
     # This is the darkest, most evil thing I think I've ever done.
     super(RecursivelyWrapped, self).__init__(inner, wrapper(_Recurse(self)))
 
+
 ###################
 # Python Matchers #
 ###################
@@ -357,6 +398,31 @@ class RecursivelyWrapped(AnyOf):
 class Equals(matcher.ImplicitEquals):
   """Matches a candidate iff it equals ``value``."""
   pass
+
+
+@matcher.safe_to_eval
+@attr.s(frozen=True)
+class TypeIs(matcher.Matcher):
+  """Matches a candidate iff its type is precisely ``_type``.
+
+  For example, `TypeIs(ast.Expr)` is roughly equivalent to the empty
+  `ast_matchers.Expr()`.
+
+  (This does *not* check any type information for the code that this candidate
+  AST node might represent.)
+  """
+  _type = attr.ib()  # type: type
+
+  def _match(self, context, candidate):
+    if type(candidate) == self._type:
+      return matcher.MatchInfo(
+          matcher.create_match(context.parsed_file, candidate))
+    else:
+      return None
+
+  @cached_property.cached_property
+  def type_filter(self):
+    return frozenset({self._type})
 
 
 def _re_match_to_bindings(compiled_regex, text, m):
@@ -384,7 +450,8 @@ class MatchesRegex(matcher.Matcher):
   spans.
   """
   _regex = attr.ib()  # type: str
-  _subpattern = matcher.submatcher_attrib(default=Anything())  # type: matcher.Matcher
+  _subpattern = matcher.submatcher_attrib(
+      default=Anything())  # type: matcher.Matcher
 
   @cached_property.cached_property
   def _wrapped_regex(self):

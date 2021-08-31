@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pyformat: disable
 """
 :mod:`~refex.python.matchers.ast_matchers`
 ------------------------------------------
@@ -35,6 +36,7 @@ And this will match any ``ast.UnaryOp`` with an ``op`` attribute matching
 
 (See the unit tests for more examples.)
 """
+# pyformat: enable
 # TODO: Add pytype support once pytype gets generics:
 #  1) generate code in a genrule rather than generating classes at runtime.
 #  2) Mark non-{expr,stmt} nodes specially since they won't have token spans.
@@ -97,6 +99,7 @@ class _AstNodeMatcher(matcher.Matcher):
 
       ty.__init__ = new_init
     ty._ast_type = ast_node_type  # pylint: disable=protected-access
+    ty.type_filter = frozenset({ast_node_type})
     return ty
 
   def _match(self, context, node):
@@ -150,6 +153,8 @@ if sys.version_info >= (3, 8):
     def _match(self, context, candidate):
       return _constant_match(context, candidate, self.n, (int, float, complex))
 
+    type_filter = frozenset({ast.Constant})
+
   @matcher.safe_to_eval
   @attr.s(frozen=True, kw_only=True)
   class Bytes(matcher.Matcher):
@@ -157,6 +162,8 @@ if sys.version_info >= (3, 8):
 
     def _match(self, context, candidate):
       return _constant_match(context, candidate, self.s, bytes)
+
+    type_filter = frozenset({ast.Constant})
 
   @matcher.safe_to_eval
   @attr.s(frozen=True, kw_only=True)
@@ -166,6 +173,8 @@ if sys.version_info >= (3, 8):
     def _match(self, context, candidate):
       return _constant_match(context, candidate, self.s, str)
 
+    type_filter = frozenset({ast.Constant})
+
   @matcher.safe_to_eval
   @attr.s(frozen=True, kw_only=True)
   class NameConstant(matcher.Matcher):
@@ -173,6 +182,8 @@ if sys.version_info >= (3, 8):
 
     def _match(self, context, candidate):
       return _constant_match(context, candidate, self.value, (bool, type(None)))
+
+    type_filter = frozenset({ast.Constant})
 
   # defined in _generate_syntax_matchers_for_type_tree, and shadows
   # the builtin Ellipsis.
@@ -187,3 +198,5 @@ if sys.version_info >= (3, 8):
     def _match(self, context, candidate):
       return _constant_match(context, candidate,
                              base_matchers.Equals(_ELLIPSIS), type(_ELLIPSIS))
+
+    type_filter = frozenset({ast.Constant})
