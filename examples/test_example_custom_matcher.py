@@ -16,13 +16,13 @@
 from refex.examples import example_custom_matcher
 from absl.testing import absltest
 from refex import search
-from refex import formatting
+from refex.python import syntactic_template
 
 
 class SumMatcherTest(absltest.TestCase):
   SEARCH_REPLACE = search.PyExprRewritingSearcher.from_matcher(
       example_custom_matcher.SumMatcher(),
-      {search.ROOT_LABEL: formatting.ShTemplate('$sum')},
+      {search.ROOT_LABEL: syntactic_template.PythonExprTemplate('$sum')},
   )
 
   def test_sum_rewrite(self):

@@ -23,6 +23,7 @@ from absl.testing import parameterized
 import six
 
 from refex import formatting
+from refex import match
 from refex.python import matcher
 from refex.python import syntactic_template
 from refex.python.matchers import ast_matchers
@@ -141,6 +142,45 @@ class PythonTemplateTest(parameterized.TestCase):
     with self.assertRaises(formatting.RewriteError):
       template.substitute_match(parsed, matchinfo.match,
                                 {'bound': matchinfo.match})
+
+
+class OpaqueReplacementTest(absltest.TestCase):
+  """Tests automatic safeties even when the replacement value is a StringMatch.
+
+  This cannot verify that the replacement parses back as itself, but can still
+  verify that the surrounding structure is unchanged.
+  """
+
+  def test_autoparen_inner(self):
+    parsed = matcher.parse_ast('x')
+    m = base_matchers.Bind('x', ast_matchers.Name())
+    [matchinfo] = matcher.find_iter(m, parsed)
+    template = syntactic_template.PythonTemplate('[$x]')
+    self.assertEqual(
+        template.substitute_match(parsed, matchinfo.match,
+                                  {'x': match.StringMatch('x, y')}),
+        '[(x, y)]',
+    )
+
+  def test_autoparen_outer(self):
+    parsed = matcher.parse_ast('x * 2')
+    m = base_matchers.Bind('x', ast_matchers.Name())
+    [matchinfo] = matcher.find_iter(m, parsed)
+    template = syntactic_template.PythonTemplate('$x')
+    self.assertEqual(
+        template.substitute_match(parsed, matchinfo.match,
+                                  {'x': match.StringMatch('x + y')}),
+        '(x + y)',
+    )
+
+  def test_invalid_syntax(self):
+    parsed = matcher.parse_ast('x')
+    m = base_matchers.Bind('x', ast_matchers.Name())
+    [matchinfo] = matcher.find_iter(m, parsed)
+    template = syntactic_template.PythonTemplate('$x')
+    with self.assertRaises(formatting.RewriteError):
+      template.substitute_match(parsed, matchinfo.match,
+                                {'x': match.StringMatch('x  y')}),
 
 
 class PythonStmtTemplateTest(parameterized.TestCase):

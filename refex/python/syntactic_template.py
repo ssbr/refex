@@ -312,9 +312,6 @@ class _BasePythonTemplate(formatting.Template):
 
     for k, bound in m.bindings.items():
       v = bound.value
-      # TODO: add useful error message if matchers[k] doesn't exist.
-      # I think this only happens if your match was non-syntactic/non-lexical
-      # and thus has no AST to safety-check against.
       if not matchers[k].match(
           matcher.MatchContext(parsed_template), v.matched):
         raise formatting.RewriteError(
@@ -371,6 +368,10 @@ def _matchers_for_matches(matches):
     if (isinstance(v, matcher.LexicalASTMatch) and
         isinstance(v.matched, ast.expr)):
       matchers[k] = syntax_matchers.ast_matchers_matcher(v.matched)
+    else:
+      # as a fallback, treat it as a black box, and assume that the rest of the
+      # expression will catch things.
+      matchers[k] = base_matchers.Anything()
   return matchers
 
 
