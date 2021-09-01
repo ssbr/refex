@@ -27,8 +27,6 @@ Logical Matchers
 
 .. autoclass:: AnyOf
 
-.. autoclass:: Bind
-
 Examples
 ........
 
@@ -45,6 +43,15 @@ These matchers will match nothing::
     Unless(Anything())
     AllOf(Unless(Anything()))
     AnyOf()
+
+Binding Manipulation Matchers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Bind
+
+.. autoclass:: Rebind
+
+.. autoclass:: StringMatch
 
 Python Data Structure Matchers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -318,6 +325,26 @@ class Rebind(matcher.Matcher):
   def type_filter(self):
     return self._submatcher.type_filter
 
+
+@matcher.safe_to_eval
+@attr.s(frozen=True)
+class StringMatch(matcher.Matcher):
+  """Creates a synthetic string match.
+
+  For example, ``Bind("foo", StringMatch("asd"))``` will result in being able to
+  use ``$foo`` in substitutions, where it will be replaced with ``asd``.
+
+  Since this produces a simple string match, it can only be used inside of
+  non-syntactic templates, such as `ShTemplate`.
+  """
+  string = attr.ib(type=str)
+
+  def _match(self, context, candidate):
+    del context, candidate  # unused
+    return matcher.MatchInfo(match.StringMatch(self.string))
+
+
+# TODO: Add AST match which works in syntactic templates.
 
 ######################
 # Recursive matchers #
