@@ -81,7 +81,7 @@ from __future__ import division
 from __future__ import print_function
 
 import re
-from typing import Container, Dict, List
+from typing import Container, Dict, List, Sequence
 import weakref
 
 import attr
@@ -162,12 +162,39 @@ class AllOf(_NAryMatcher):
 @matcher.safe_to_eval
 class AnyOf(_NAryMatcher):
   """Matches if at least one submatcher does, and returns the first result."""
+  _universal_matchers: Sequence[matcher.Matcher]
+  _typed_matchers: Dict[type, Sequence[matcher.Matcher]]
+
+  @cached_property.cached_property
+  def _universal_matchers(self):
+    return [
+        matcher for matcher in self._matchers if matcher.type_filter is None
+    ]
+
+  @cached_property.cached_property
+  def _typed_matchers(self):
+    typed_matchers = {
+        ty: [] for matcher in self._matchers for ty in matcher.type_filter or ()
+    }
+
+    for matcher in self._matchers:
+      if matcher.type_filter is None:
+        # Add it to all types -- we need to insert it in the correct place so
+        # that matchers are always tried in-order.
+        # if we instead ran the universal matchers afterwards, then a matcher
+        # first in the list might get pre-empted by a more specifically typed
+        # matcher that came second.
+        types = typed_matchers.keys()
+      else:
+        types = matcher.type_filter
+      for ty in types:
+        typed_matchers[ty].append(matcher)
+    return typed_matchers
 
   def _match(self, context, candidate):
-    for submatcher in self._matchers:
-      if submatcher.type_filter is not None and type(
-          candidate) not in submatcher.type_filter:
-        continue
+    matchers = self._typed_matchers.get(
+        type(candidate), self._universal_matchers)
+    for submatcher in matchers:
       extra = submatcher.match(context, candidate)
       if extra is not None:
         return extra

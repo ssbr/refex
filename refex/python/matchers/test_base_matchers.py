@@ -355,6 +355,27 @@ class AnyOfTest(absltest.TestCase):
         frozenset({int, float}),
     )
 
+  def test_type_filter_ordered(self):
+    """Tests that type optimizations don't mess with matcher order."""
+    m = base_matchers.AnyOf(
+        base_matchers.Bind('a', base_matchers.Anything()),
+        base_matchers.Bind('b', base_matchers.TypeIs(int)),
+    )
+    self.assertEqual(
+        m.match(_FAKE_CONTEXT, 4).bindings.keys(),
+        {'a'},
+    )
+
+  def test_type_filter_skipped_micro(self):
+    """Matchers are skipped if they do not match the type filter."""
+    m = base_matchers.AnyOf(
+        base_matchers.AllOf(
+            base_matchers.TestOnlyRaise('this should be skipped'),
+            base_matchers.TypeIs(float)),
+        base_matchers.TypeIs(int),
+    )
+    self.assertIsNotNone(m.match(_FAKE_CONTEXT, 4))
+
 
 class UnlessTest(absltest.TestCase):
 
