@@ -78,10 +78,8 @@ class Substitution(object):
   #: The label for the location of the :class:`Substitution`.
   primary_label = attr.ib(type=Text)
 
-  #: A mapping from labels to replacement strings. If ``None``, then
-  #: this is a match that may be a candidate for some substitution, but no
-  #: replacements were specified.
-  replacements = attr.ib(default=None, type=Optional[Mapping[str, Text]])
+  #: A mapping from labels to replacement strings. May be empty.
+  replacements = attr.ib(factory=dict, type=Mapping[str, Text])
 
   #: A message describing the issue.
   message = attr.ib(default=None, type=Optional[Text])

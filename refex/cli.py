@@ -234,7 +234,7 @@ class _SearchReplaceArgument(object):
   #: The pattern.
   match = attr.ib(default=None, type=str)
   #: The replacement (specified via --sub or --named-sub)
-  sub = attr.ib(default=None, type=Optional[Dict[str, str]])
+  sub = attr.ib(factory=dict, type=Dict[str, str])
 
 
 def _setdefault_searchreplace(o, name):
@@ -269,7 +269,7 @@ class _AddSubAction(argparse.Action):
   def __call__(self, parser, namespace, value, option_string=None):
     search_replaces = _setdefault_searchreplace(namespace, self.dest)
     old_sub = search_replaces[-1].sub
-    if old_sub is not None:
+    if old_sub:
       parser.error(
           'The most recent --match pattern has already had a substitution defined (tried to overwrite %s with --sub %s)'
           % (old_sub, value))
@@ -444,9 +444,9 @@ def report_failures(failures, bug_report_url, version, verbose):
 
 
 def _fixer_from_pattern(pattern, templates):
-  # templates is null unless you pass in a --sub argument,
+  # templates is empty unless you pass in a --sub argument,
   # which doesn't make sense for this search mode.
-  if templates is not None:
+  if templates:
     raise ValueError(
         'Cannot override substitution (--sub, --named-sub) with --mode=fix')
   return find_fixer.from_pattern(pattern)
@@ -517,9 +517,6 @@ def _get_sub_parser(options):
 
 def _parse_templates(parser, sub_parser, templates):
   """Parses the template mapping from args."""
-  if templates is None:
-    return None
-
   for name, sub in templates.items():
     try:
       template = sub_parser(sub)

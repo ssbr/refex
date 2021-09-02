@@ -136,14 +136,14 @@ def _sub_strings(s, subs):
 class CombinedSearcherTest(parameterized.TestCase):
 
   @parameterized.parameters(
-      search.RegexSearcher.from_pattern('x', None),
-      search.PyExprRewritingSearcher.from_pattern('x', None),
+      search.RegexSearcher.from_pattern('x', {}),
+      search.PyExprRewritingSearcher.from_pattern('x', {}),
   )
   def test_compatible_searchers(self, x_searcher):
     src = 'x, y'
     searcher = search.CombinedSearcher([
         x_searcher,
-        search.RegexSearcher.from_pattern('y', None),
+        search.RegexSearcher.from_pattern('y', {}),
     ])
 
     self.assertEqual(
@@ -163,8 +163,8 @@ class CombinedSearcherTest(parameterized.TestCase):
 
   def test_approximate_regex(self):
     searcher = search.CombinedSearcher([
-        search.RegexSearcher.from_pattern('x', None),
-        search.RegexSearcher.from_pattern('y', None),
+        search.RegexSearcher.from_pattern('x', {}),
+        search.RegexSearcher.from_pattern('y', {}),
     ])
 
     self.assertEqual(searcher.approximate_regex(), '(?:x)|(?:y)')
@@ -173,8 +173,8 @@ class CombinedSearcherTest(parameterized.TestCase):
 
   def test_null_approximate_regex(self):
     searcher = search.CombinedSearcher([
-        search.PyExprRewritingSearcher.from_pattern('x', None),
-        search.RegexSearcher.from_pattern('y', None),
+        search.PyExprRewritingSearcher.from_pattern('x', {}),
+        search.RegexSearcher.from_pattern('y', {}),
     ])
 
     self.assertIsNone(searcher.approximate_regex())

@@ -336,7 +336,7 @@ class Renderer(object):
     match_end = max(end for (start, end) in sub.matched_spans.values())
     line_start, line_end = line_expanded_span(contents, match_start, match_end)
 
-    if sub.replacements is not None:
+    if sub.replacements:
       # include the surrounding context up to the line ends in the diff.
       extended_diffs = itertools.chain(
           [
@@ -438,61 +438,6 @@ class Renderer(object):
         rendered.append(self._style(style, line) + tail)
 
     return ''.join(rendered)
-
-
-class Rewriter(six.with_metaclass(abc.ABCMeta)):
-  """A rewrite callback for ``search.*RewritingSearcher`` classes."""
-
-  @abc.abstractmethod
-  def rewrite(
-      self,
-      parsed: parsed_file.ParsedFile,
-      matches: Mapping[Text, _match.Match]
-  ) -> Optional[Mapping[Text, Text]]:
-    """Returns the replacements, if any, for a given set of labeled match spans.
-
-    For each labeled span in the input, if the replacements are applied, that
-    span is deleted and replaced with ``rewrite(...)[label]``.
-
-    The replacements returned by rewrite, and the original matches, are composed
-    together into a :class:`~refex.substitution.Substitution` object. The return
-    value for :meth:`rewrite()` is the replacements attribute of the
-    substitution.
-
-    Args:
-      parsed: the :class:`~refex.parsed_file.ParsedFile` that the matches came
-          from.
-      matches: A mapping from label -> matched :class:`~refex.match.Match`.
-
-    Returns:
-      A mapping from label in matches -> replacement text, or ``None``.
-
-      If any labeled spans are not in the returned mapping, they are not
-      altered.
-
-      If any labels are in the returned dict but not in the original matched
-      spans, this is an error.
-
-      If :meth:`rewrite()` returns ``None``, no change shall apply.
-    """
-    del parsed, matches  # unused
-    return None
-
-  @abc.abstractproperty
-  def labels(self):
-    """Returns the set of labels that the rewrite uses from matches."""
-    return frozenset()
-
-
-@attr.s(frozen=True)
-class NullRewriter(Rewriter):
-  """Rewrite nothing."""
-
-  def rewrite(self, parsed, matches):
-    del parsed, matches  # unused
-    return None
-
-  labels = frozenset()
 
 
 class _IdDict(object):
@@ -633,7 +578,7 @@ class RegexTemplate(Template):
 
 
 @attr.s
-class TemplateRewriter(Rewriter):
+class TemplateRewriter:
   r"""Rewrite labeled spans using Template classes.
 
   For example, given matches with labels 0, 1, and 'foobar', you can use the
@@ -665,6 +610,7 @@ class TemplateRewriter(Rewriter):
 
   @cached_property.cached_property
   def labels(self):
+    """Returns the set of labels that the rewrite uses from matches."""
     labels = set()
     for label, template in self._template.items():
       labels.add(label)

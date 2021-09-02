@@ -586,7 +586,7 @@ class BaseRewritingSearcher(AbstractSearcher):
       {'a': formatting.ShTemplate('')}
   """
 
-  templates = attr.ib(type=Optional[Dict[str, formatting.Template]])
+  templates = attr.ib(type=Dict[str, formatting.Template])
 
   # TODO: Remove the rewriter class entirely and get rid of this
   # dynamic dispatch stuff.
@@ -596,11 +596,8 @@ class BaseRewritingSearcher(AbstractSearcher):
   # Without Rewriter, one could still accomplish totally customized rewrites
   # using -- at worst -- a custom Template class.
   @cached_property.cached_property
-  def rewriter(self) -> formatting.Rewriter:
-    if self.templates is None:
-      return formatting.NullRewriter()
-    else:
-      return formatting.TemplateRewriter(self.templates)
+  def rewriter(self) -> formatting.TemplateRewriter:
+    return formatting.TemplateRewriter(self.templates)
 
   def __attrs_post_init__(self):
     # A stub post-init so that subclasses can use super().
