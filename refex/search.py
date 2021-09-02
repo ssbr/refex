@@ -708,18 +708,7 @@ class BasePythonSearcher(AbstractSearcher):
 class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
   """Searcher class using :mod``refex.python.matchers``."""
 
-  templates = attr.ib(type=Dict[str, formatting.Template])
   _matcher = attr.ib()
-
-  def __attrs_post_init__(self):
-    super(BasePythonRewritingSearcher, self).__attrs_post_init__()
-    missing_labels = formatting.template_variables(
-        self.templates) - self._matcher.bind_variables  # pytype: disable=wrong-arg-types
-    if missing_labels:
-      raise ValueError(
-          'The substitution template(s) referenced variables not matched in the Python matcher: {variables}'
-          .format(variables=', '.join(
-              '`{}`'.format(v) for v in sorted(missing_labels))))
 
   @classmethod
   def from_matcher(cls, matcher, templates: Optional[Dict[str, formatting.Template]]):
@@ -727,18 +716,19 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
     # We wrap the evaluated matcher in a SystemBind() that is sort of like
     # "group 0" for regexes.
     return cls(
-        matcher=base_matchers.SystemBind(ROOT_LABEL, matcher),
-        templates=templates)
+        matcher=base_matchers.WithReplacements(
+            base_matchers.SystemBind(ROOT_LABEL, matcher), templates))
 
   def find_dicts_parsed(
       self, parsed: matcher.PythonParsedFile
   ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
       MatchKey, formatting.Template]]]:
     for result in matcher.find_iter(self._matcher, parsed):
-      yield {
+      matches = {
           bound_name: match.value
           for bound_name, match in result.bindings.items()
-      }, self.templates
+      }
+      yield matches, result.replacements
 
   def key_span_for_dict(self, parsed: matcher.PythonParsedFile,
                               match_dict: Dict[str, match.Match]):

@@ -81,12 +81,13 @@ from __future__ import division
 from __future__ import print_function
 
 import re
-from typing import Container, List
+from typing import Container, Dict, List
 import weakref
 
 import attr
 import cached_property
 
+from refex import formatting
 from refex import match
 from refex.python import matcher
 
@@ -346,6 +347,36 @@ class StringMatch(matcher.Matcher):
 
 # TODO: Add AST match which works in syntactic templates.
 
+
+@attr.s(frozen=True)
+class WithReplacements(matcher.Matcher):
+  submatcher = matcher.submatcher_attrib()
+  replacements = attr.ib(type=Dict[str, formatting.Template])
+
+  def __attrs_post_init__(self):
+    missing_labels = formatting.template_variables(
+        self.replacements) - self.bind_variables
+    if missing_labels:
+      raise ValueError(
+          'The substitution template(s) referenced variables not matched in the Python matcher: {variables}'
+          .format(variables=', '.join(
+              '`{}`'.format(v) for v in sorted(missing_labels))))
+
+  @cached_property.cached_property
+  def type_filter(self):
+    return self.submatcher.type_filter
+
+  def _match(self, context, candidate):
+    mi = self.submatcher.match(context, candidate)
+    if mi is None:
+      return None
+    return attr.evolve(
+        mi,
+        replacements=matcher.merge_replacements(mi.replacements,
+                                                self.replacements))
+
+
+
 ######################
 # Recursive matchers #
 ######################
@@ -514,7 +545,7 @@ class MatchesRegex(matcher.Matcher):
     if bindings is None:
       return None
 
-    return matcher.MatchInfo(matchinfo.match, bindings)
+    return attr.evolve(matchinfo, bindings=bindings)
 
   @cached_property.cached_property
   def bind_variables(self):

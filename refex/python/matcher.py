@@ -96,6 +96,7 @@ import cached_property
 import six
 from six.moves import reprlib
 
+from refex import formatting
 from refex import match
 from refex import parsed_file
 
@@ -639,16 +640,30 @@ def merge_bindings(lhs, rhs):
   return merged_bindings
 
 
+def merge_replacements(lhs, rhs):
+  conflicts = lhs.keys() & rhs.keys()
+  if conflicts:
+    raise MatchError(f'Conflicting replacements: {conflicts}')
+  merged = {}
+  merged.update(lhs)
+  merged.update(rhs)
+  return merged
+
+
 @attr.s(frozen=True)
 class MatchInfo(object):
   """A result object containing a successful match.
 
   Attributes:
     match: The match for the top-level matcher.
+    replacement: the replacement for the match, if any.
     bindings: A dict of bound matches for later reuse.
+    replacements: A dict of replacements for given bindings.
   """
   match = attr.ib(type=_match.Match)
+  # TODO: also add a top-level `replacement` variable, replacing the magic root.
   bindings = attr.ib(factory=dict, type=Dict[str, _match.Match])
+  replacements = attr.ib(factory=dict, type=Dict[str, _match.Match])
 
 
 def _stringify_candidate(context, candidate):
@@ -809,6 +824,7 @@ def accumulating_matcher(f):
   def wrapped(self, context, candidate):
     """Documented above."""
     bindings = {}
+    replacements = {}
     with contextlib.closing(f(self, context, candidate)) as coro_gen:
       try:
         mi = next(coro_gen)
@@ -818,11 +834,15 @@ def accumulating_matcher(f):
           bindings = merge_bindings(bindings, mi.bindings)
           if bindings is None:
             return None
+          replacements = merge_replacements(replacements, mi.replacements)
           mi = coro_gen.send(mi.match)
       except StopIteration:
         pass
 
-    return MatchInfo(create_match(context.parsed_file, candidate), bindings)
+    return MatchInfo(
+        create_match(context.parsed_file, candidate),
+        bindings=bindings,
+        replacements=replacements)
 
   return wrapped
 

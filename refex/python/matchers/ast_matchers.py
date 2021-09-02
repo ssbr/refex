@@ -102,22 +102,15 @@ class _AstNodeMatcher(matcher.Matcher):
     ty.type_filter = frozenset({ast_node_type})
     return ty
 
+  @matcher.accumulating_matcher
   def _match(self, context, node):
     """Matches a node with the correct type and matching attributes."""
     if type(node) != self._ast_type:  # pylint: disable=unidiomatic-typecheck
-      return None
+      yield None
 
-    bindings = {}
     for field in self._ast_type._fields:
       submatcher = getattr(self, field)
-      extra = submatcher.match(context, getattr(node, field, None))
-      if extra is None:
-        return None
-      bindings = matcher.merge_bindings(bindings, extra.bindings)
-      if bindings is None:
-        return None
-    return matcher.MatchInfo(
-        matcher.create_match(context.parsed_file, node), bindings)
+      yield submatcher.match(context, getattr(node, field, None))
 
 
 def _generate_syntax_matchers_for_type_tree(d, ast_node_type_root):
