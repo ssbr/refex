@@ -561,7 +561,25 @@ class FileRegexFilteredSearcher(AbstractSearcher):
                           (path, self.include_regex))
 
 
+#: The special metavariable for the root of the match.
 ROOT_LABEL = '__root'
+
+#: The special metavariable for ``Substitution.message```
+MESSAGE_LABEL = '__message'
+
+#: The special metavariable for ``Substitution.url```
+URL_LABEL = '__url'
+
+#: The special metavariable for ``Substitution.category```
+CATEGORY_LABEL = '__category'
+
+#: The special metavariable for ``Substitution.significant```
+#:
+#: This is a bit of a hack to allow significance to be represented as a
+#: substitution.
+#:
+#: TODO: remove this in favor of a richer SubstitutionTemplate type.
+SIGNIFICANT_LABEL = '__significant'
 
 
 @attr.s(frozen=True)
@@ -637,7 +655,12 @@ class BaseRewritingSearcher(AbstractSearcher):
           },
           replacements=replacements,
           primary_label=ROOT_LABEL,
-          key_span=self.key_span_for_dict(parsed, match_dict))
+          key_span=self.key_span_for_dict(parsed, match_dict),
+          message=replacements.pop(MESSAGE_LABEL, None),
+          url=replacements.pop(URL_LABEL, None),
+          category=replacements.pop(CATEGORY_LABEL, None),
+          significant=bool(replacements.pop(SIGNIFICANT_LABEL, '')),
+      )
 
 
 @attr.s(frozen=True)
@@ -817,6 +840,10 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
           },
           replacements=replacements,
           primary_label=ROOT_LABEL,
+          message=replacements.pop(MESSAGE_LABEL, None),
+          url=replacements.pop(URL_LABEL, None),
+          category=replacements.pop(CATEGORY_LABEL, None),
+          significant=bool(replacements.pop(SIGNIFICANT_LABEL, '')),
       )
       yield self._sanitize_removed_stmt(
           parsed,
@@ -910,10 +937,12 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
           [start, _] = matched_spans[metavar]
           matched_spans[metavar] = (start, next_token.endpos)
 
-    return substitution.Substitution(
+    return attr.evolve(
+        sub,
         matched_spans=matched_spans,
         replacements=replacements,
-        primary_label=sub.primary_label)
+        primary_label=sub.primary_label,
+    )
 
 
 def rewrite_string(

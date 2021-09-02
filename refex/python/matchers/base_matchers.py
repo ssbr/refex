@@ -356,6 +356,10 @@ class WithReplacements(matcher.Matcher):
   def __attrs_post_init__(self):
     missing_labels = formatting.template_variables(
         self.replacements) - self.bind_variables
+    # System labels don't count.
+    missing_labels = {
+        label for label in missing_labels if not label.startswith('__')
+    }
     if missing_labels:
       raise ValueError(
           'The substitution template(s) referenced variables not matched in the Python matcher: {variables}'
@@ -374,7 +378,6 @@ class WithReplacements(matcher.Matcher):
         mi,
         replacements=matcher.merge_replacements(mi.replacements,
                                                 self.replacements))
-
 
 
 ######################

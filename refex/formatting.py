@@ -43,6 +43,10 @@ Templates
 .. autoclass:: Template
    :members:
 
+.. autoclass:: LiteralTemplate
+   :show-inheritance:
+   :members:
+
 .. autoclass:: ShTemplate
    :show-inheritance:
    :members:
@@ -523,6 +527,19 @@ def stringify_matches(matches):
 
 
 @attr.s(frozen=True)
+class LiteralTemplate(Template):
+  """A no-op template which does no substitution at all."""
+
+  #: The source template.
+  template = attr.ib(type=Text)
+  variables = frozenset()
+
+  def substitute_match(self, parsed, match, matches):
+    del parsed, match, matches  # unused
+    return self.template
+
+
+@attr.s(frozen=True)
 class ShTemplate(Template):
   """A :class:`string.Template`-style literal template.
 
@@ -599,14 +616,19 @@ def rewrite_templates(parsed, matches, templates):
     a map from matches key to formatted template.
   """
   replacements = collections.OrderedDict()
-  for label, m in matches.items():
-    if m.span in (None, (-1, -1)):
-      # Either the match doesn't have position information,
-      # or it was not present at all, respectively.
+  for label, template in templates.items():
+    if label in matches:
+      m = matches[label]
+      if m.span in (None, (-1, -1)):
+        # Either the match doesn't have position information,
+        # or it was not present at all, respectively.
+        continue
+    elif label.startswith('__'):
+      # Special label, fake a zero-length match.
+      m = _match.Match()
+    else:
       continue
-    if label not in templates:
-      continue
-    replacements[label] = templates[label].substitute_match(parsed, m, matches)
+    replacements[label] = template.substitute_match(parsed, m, matches)
   return replacements
 
 

@@ -30,6 +30,7 @@ from refex import future_string
 from refex import search
 from refex import substitution
 from refex.python import matcher
+from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
 
 
@@ -113,18 +114,26 @@ class SimplePythonFixer(ParsedPythonFixer):
       replacement = {search.ROOT_LABEL: self._replacement}
     else:
       replacement = self._replacement
-    return search.PyMatcherRewritingSearcher.from_matcher(
-        self._matcher, replacement)
+
+    meta_replacements = {}
+    if self._message is not None:
+      meta_replacements[search.MESSAGE_LABEL] = formatting.LiteralTemplate(
+          self._message)
+    if self._url is not None:
+      meta_replacements[search.URL_LABEL] = formatting.LiteralTemplate(
+          self._url)
+    if self._category is not None:
+      meta_replacements[search.CATEGORY_LABEL] = formatting.LiteralTemplate(
+          self._category)
+    if self._significant:
+      meta_replacements[search.SIGNIFICANT_LABEL] = formatting.LiteralTemplate(
+          'HACK_TRUE')
+
+    matcher = base_matchers.WithReplacements(self._matcher, meta_replacements)
+    return search.PyMatcherRewritingSearcher.from_matcher(matcher, replacement)
 
   def find_iter_parsed(self, parsed):
-    for sub in self._searcher.find_iter_parsed(parsed):
-      yield attr.evolve(
-          sub,
-          message=self._message,
-          url=self._url,
-          significant=self._significant,
-          category=self._category,
-      )
+    return self._searcher.find_iter_parsed(parsed)
 
   def example_fragment(self):
     if self._example_fragment is not None:
