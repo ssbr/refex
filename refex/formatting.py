@@ -76,7 +76,7 @@ import subprocess
 import sys
 import tempfile
 import typing
-from typing import Any, Iterable, Mapping, Optional, Text, Tuple
+from typing import Any, Iterable, Mapping, Optional, Set, Text, Tuple
 
 import attr
 import cached_property
@@ -577,8 +577,7 @@ class RegexTemplate(Template):
     return frozenset(source for _, source in fillers)
 
 
-@attr.s
-class TemplateRewriter:
+def rewrite_templates(parsed, matches, templates):
   r"""Rewrite labeled spans using Template classes.
 
   For example, given matches with labels 0, 1, and 'foobar', you can use the
@@ -590,32 +589,34 @@ class TemplateRewriter:
 
   And this will rewrite match 0 with the contents of match 1, match 1 with the
   contents of match foobar, and match foobar with the contents of match 0.
+
+  Args:
+    parsed: the ParsedFile.
+    matches: the matches.
+    templates: a map from matches key to template.
+
+  Returns:
+    a map from matches key to formatted template.
   """
+  replacements = collections.OrderedDict()
+  for label, m in matches.items():
+    if m.span in (None, (-1, -1)):
+      # Either the match doesn't have position information,
+      # or it was not present at all, respectively.
+      continue
+    if label not in templates:
+      continue
+    replacements[label] = templates[label].substitute_match(parsed, m, matches)
+  return replacements
 
-  _template = attr.ib()  # type: Mapping[Any, Template]
 
-  def rewrite(self, parsed, matches):
-    """Rewrites using the pre-parsed template. See class docstring."""
-    replacements = collections.OrderedDict()
-    for label, m in matches.items():
-      if m.span in (None, (-1, -1)):
-        # Either the match doesn't have position information,
-        # or it was not present at all, respectively.
-        continue
-      if label not in self._template:
-        continue
-      replacements[label] = self._template[label].substitute_match(
-          parsed, m, matches)
-    return replacements
-
-  @cached_property.cached_property
-  def labels(self):
-    """Returns the set of labels that the rewrite uses from matches."""
-    labels = set()
-    for label, template in self._template.items():
-      labels.add(label)
-      labels |= template.variables
-    return frozenset(labels)
+def template_variables(templates: Mapping[Any, Template]) -> Set[Any]:
+  """Returns the set of labels used in the templates."""
+  labels = set()
+  for label, template in templates.items():
+    labels.add(label)
+    labels |= template.variables
+  return frozenset(labels)
 
 
 def _rewrite_to_replacements(label_to_span, label_to_text):

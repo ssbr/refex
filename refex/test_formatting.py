@@ -233,50 +233,47 @@ class TemplateRewriterTest(absltest.TestCase):
 
   def test_empty(self):
     self.assertEqual(
-        formatting.TemplateRewriter({}).rewrite(
-            parsed_file.ParsedFile('abc', path='path', pragmas=()), {}), {})
+        formatting.rewrite_templates(
+            parsed_file.ParsedFile('abc', path='path', pragmas=()), {}, {}), {})
 
   def test_named_template(self):
     self.assertEqual(
-        formatting.TemplateRewriter({
-            'foo': formatting.RegexTemplate(r'x\g<foo>x')
-        }).rewrite(
+        formatting.rewrite_templates(
             parsed_file.ParsedFile('abc', path='path', pragmas=()),
-            collections.OrderedDict([('foo', match.SpanMatch('b', (1, 2)))])),
-        {'foo': 'xbx'})
+            collections.OrderedDict([('foo', match.SpanMatch('b', (1, 2)))]),
+            {'foo': formatting.RegexTemplate(r'x\g<foo>x')}), {'foo': 'xbx'})
 
   def test_missing_template(self):
     self.assertEqual(
-        formatting.TemplateRewriter({
-            # swap foo and bar
-            'foo': formatting.RegexTemplate(r'bar=\g<bar>'),
-            'bar': formatting.RegexTemplate(r'foo=\g<foo>'),
-        }).rewrite(
+        formatting.rewrite_templates(
             parsed_file.ParsedFile('abc', path='path', pragmas=()),
             collections.OrderedDict([('foo', match.SpanMatch('', (-1, -1))),
-                                     ('bar', match.SpanMatch('a', (0, 1)))])),
+                                     ('bar', match.SpanMatch('a', (0, 1)))]),
+            {
+                # swap foo and bar
+                'foo': formatting.RegexTemplate(r'bar=\g<bar>'),
+                'bar': formatting.RegexTemplate(r'foo=\g<foo>'),
+            }),
         # foo is never matched, bar is replaced with foo=<non-match>,
         # which is treated as ''.
         {'bar': 'foo='})
 
   def test_labels_empty(self):
-    self.assertEqual(formatting.TemplateRewriter({}).labels, set())
+    self.assertEqual(formatting.template_variables({}), set())
 
   def test_labels_nonempty(self):
     self.assertEqual(
-        formatting.TemplateRewriter({
-            'key': formatting.RegexTemplate(r'\g<template_variable>')
-        }).labels, {'key', 'template_variable'})
+        formatting.template_variables(
+            {'key': formatting.RegexTemplate(r'\g<template_variable>')}),
+        {'key', 'template_variable'})
 
   def test_string_match(self):
     self.assertEqual(
-        formatting.TemplateRewriter({
-            'foo': formatting.ShTemplate(r'$bar')
-        }).rewrite(
+        formatting.rewrite_templates(
             parsed_file.ParsedFile('abc', path='path', pragmas=()),
             collections.OrderedDict([('foo', match.SpanMatch('abc', (0, 3))),
-                                     ('bar', match.StringMatch('xyz'))])),
-        {'foo': 'xyz'})
+                                     ('bar', match.StringMatch('xyz'))]),
+            {'foo': formatting.ShTemplate(r'$bar')}), {'foo': 'xyz'})
 
 
 class ConcatenateReplacementsTest(parameterized.TestCase, absltest.TestCase):

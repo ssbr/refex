@@ -588,17 +588,6 @@ class BaseRewritingSearcher(AbstractSearcher):
 
   templates = attr.ib(type=Dict[str, formatting.Template])
 
-  # TODO: Remove the rewriter class entirely and get rid of this
-  # dynamic dispatch stuff.
-  #
-  # Rewriter classes don't really have a function anymore, and don't aid
-  # extensibility or understandability. They just add more indirection.
-  # Without Rewriter, one could still accomplish totally customized rewrites
-  # using -- at worst -- a custom Template class.
-  @cached_property.cached_property
-  def rewriter(self) -> formatting.TemplateRewriter:
-    return formatting.TemplateRewriter(self.templates)
-
   def __attrs_post_init__(self):
     # A stub post-init so that subclasses can use super().
     pass
@@ -633,7 +622,8 @@ class BaseRewritingSearcher(AbstractSearcher):
       parsed: matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
     for match_dict in self.find_dicts_parsed(parsed):
       try:
-        replacements = self.rewriter.rewrite(parsed, match_dict)
+        replacements = formatting.rewrite_templates(parsed, match_dict,
+                                                    self.templates)
       except formatting.RewriteError as e:
         # TODO: Forward this up somehow.
         print('Skipped rewrite:', e, file=sys.stderr)
@@ -663,9 +653,8 @@ class RegexSearcher(BaseRewritingSearcher):
     pattern_labels = set(range(self._compiled.groups + 1))  # numeric groups
     pattern_labels.update(self._compiled.groupindex)  # named groups
     pattern_labels.add('__root')
-    # NOTE: Pytype doesn't like the cached_property decoration on `labels` as it
-    # returns conditional types and infers `Callable` instead of `Any`.
-    missing_labels = set(self.rewriter.labels) - pattern_labels  # pytype: disable=wrong-arg-types
+    missing_labels = formatting.template_variables(
+        self.templates) - pattern_labels
     if missing_labels:
       raise ValueError(
           'The substitution template(s) referenced groups not available in the regex (`{self._compiled.pattern}`): {groups}'
@@ -718,9 +707,8 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
 
   def __attrs_post_init__(self):
     super(BasePythonRewritingSearcher, self).__attrs_post_init__()
-    # NOTE: Pytype doesn't like the cached_property decoration on `labels` as it
-    # returns conditional types and infers `Callable` instead of `Any`.
-    missing_labels = set(self.rewriter.labels) - self._matcher.bind_variables  # pytype: disable=wrong-arg-types
+    missing_labels = formatting.template_variables(
+        self.templates) - self._matcher.bind_variables  # pytype: disable=wrong-arg-types
     if missing_labels:
       raise ValueError(
           'The substitution template(s) referenced variables not matched in the Python matcher: {variables}'
@@ -817,7 +805,8 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
     # TODO: Deduplicate this impl from the base find_iter_parsed.
     for match_dict in self.find_dicts_parsed(parsed):
       try:
-        replacements = self.rewriter.rewrite(parsed, match_dict)
+        replacements = formatting.rewrite_templates(parsed, match_dict,
+                                                    self.templates)
       except formatting.RewriteError as e:
         # TODO: Forward this up somehow.
         print('Skipped rewrite:', e, file=sys.stderr)
