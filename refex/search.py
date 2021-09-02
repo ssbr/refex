@@ -586,8 +586,6 @@ class BaseRewritingSearcher(AbstractSearcher):
       {'a': formatting.ShTemplate('')}
   """
 
-  templates = attr.ib(type=Dict[str, formatting.Template])
-
   def __attrs_post_init__(self):
     # A stub post-init so that subclasses can use super().
     pass
@@ -595,15 +593,18 @@ class BaseRewritingSearcher(AbstractSearcher):
   @abc.abstractmethod
   def find_dicts_parsed(
       self, parsed: parsed_file.ParsedFile
-  ) -> Iterable[Mapping[MatchKey, match.Match]]:
-    """Finds all matches as an iterable of dict matches.
+  ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
+      MatchKey, formatting.Template]]]:
+    """Finds all match/replacement pairs, as an iterable of pairs of dicts.
 
     Args:
       parsed: the return value of a call to parse()
 
     Returns:
-      An iterable of matches, mapping labels to Span objects.
-      :data:`ROOT_LABEL` must be included in every match.
+      An iterable of ``(matches, replacements)``.
+      ``matches`` maps labels to Span objects, ``replacements`` maps labels to
+      templates.
+      :data:`ROOT_LABEL` must be included in every ``matches`` dict.
     """
     del parsed  # unused
     return []
@@ -620,10 +621,10 @@ class BaseRewritingSearcher(AbstractSearcher):
   def find_iter_parsed(
       self,
       parsed: matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
-    for match_dict in self.find_dicts_parsed(parsed):
+    for match_dict, templates in self.find_dicts_parsed(parsed):
       try:
         replacements = formatting.rewrite_templates(parsed, match_dict,
-                                                    self.templates)
+                                                    templates)
       except formatting.RewriteError as e:
         # TODO: Forward this up somehow.
         print('Skipped rewrite:', e, file=sys.stderr)
@@ -646,6 +647,8 @@ class RegexSearcher(BaseRewritingSearcher):
   Args:
     compiled: A compiled regex.
   """
+
+  templates = attr.ib(type=Dict[str, formatting.Template])
   _compiled = attr.ib()
 
   def __attrs_post_init__(self):
@@ -669,7 +672,8 @@ class RegexSearcher(BaseRewritingSearcher):
 
   def find_dicts_parsed(
       self, parsed: matcher.PythonParsedFile
-  ) -> Iterable[Mapping[MatchKey, match.Match]]:
+  ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
+      MatchKey, formatting.Template]]]:
     for m in self._compiled.finditer(parsed.text):
       # TODO(b/118783544): Only string keys.
       matches = {(ROOT_LABEL if i == 0 else i): v for i, v in enumerate(
@@ -678,7 +682,7 @@ class RegexSearcher(BaseRewritingSearcher):
       # \g<name>) not just their index (\1, \2, etc.).
       for named_group, i in self._compiled.groupindex.items():
         matches[named_group] = matches[i]
-      yield matches
+      yield matches, self.templates
 
   def approximate_regex(self) -> str:
     return self._compiled.pattern
@@ -703,6 +707,8 @@ class BasePythonSearcher(AbstractSearcher):
 @attr.s(frozen=True)
 class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
   """Searcher class using :mod``refex.python.matchers``."""
+
+  templates = attr.ib(type=Dict[str, formatting.Template])
   _matcher = attr.ib()
 
   def __attrs_post_init__(self):
@@ -726,12 +732,13 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
 
   def find_dicts_parsed(
       self, parsed: matcher.PythonParsedFile
-  ) -> Iterable[Mapping[MatchKey, match.Match]]:
+  ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
+      MatchKey, formatting.Template]]]:
     for result in matcher.find_iter(self._matcher, parsed):
       yield {
           bound_name: match.value
           for bound_name, match in result.bindings.items()
-      }
+      }, self.templates
 
   def key_span_for_dict(self, parsed: matcher.PythonParsedFile,
                               match_dict: Dict[str, match.Match]):
@@ -803,10 +810,10 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
     removed_suite_prefix_nodes = set([])
 
     # TODO: Deduplicate this impl from the base find_iter_parsed.
-    for match_dict in self.find_dicts_parsed(parsed):
+    for match_dict, templates in self.find_dicts_parsed(parsed):
       try:
         replacements = formatting.rewrite_templates(parsed, match_dict,
-                                                    self.templates)
+                                                    templates)
       except formatting.RewriteError as e:
         # TODO: Forward this up somehow.
         print('Skipped rewrite:', e, file=sys.stderr)
