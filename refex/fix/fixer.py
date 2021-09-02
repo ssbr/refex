@@ -23,6 +23,7 @@ import operator
 from typing import Callable, List, Mapping, Optional, Text, TypeVar
 
 import attr
+import cached_property
 import six
 
 from refex import formatting
@@ -48,29 +49,29 @@ class ParsedPythonFixer(
   def example_replacement(self):
     """Returns what replacement is expected for the example fragment."""
 
+  @abc.abstractproperty
+  def matcher_with_meta(self):
+    """Returns a fully-decorated Matcher which attaches all substitution metadata."""
+
 
 @attr.s(frozen=True)
 class CombiningPythonFixer(search.FileRegexFilteredSearcher,
-                           search.BasePythonSearcher):
-  """Combining fixer for ParsedPythonFixer, sharing common work."""
-  # TODO: This algorithm is O(n*m) and keeps growing as you add more
-  # matchers. If this becomes untenable, we can group the matchers by a common
-  # prefix -- for example, "self.assertTrue(a == b)" and
-  # "self.assertTrue(a < b)" are both going to do that initial self.assertTrue
-  # match redundantly. Instead, we can refactor this into a matcher that checks
-  # for self.assertTrue and a binary operator before finally branching to the
-  # specific matches involved. And, we should even be able to generate this
-  # automatically!
+                           search.BasePythonRewritingSearcher):
+  """Combining fixer for ParsedPythonFixer, sharing common work.
 
+  This combines all of the matchers (``matcher_with_meta``) into one big
+  ``AnyOf``, allowing for optimized traversal.
+  """
   fixers = attr.ib()  # type: List[search.BasePythonSearcher]
   include_regex = attr.ib(default=r'.*[.]py$')
 
-  def find_iter_parsed(self, parsed):
-    """Returns all disjoint substitutions for parsed, in sorted order."""
-    # (span, substitution) pairs
-    return substitution.disjoint_substitutions(sub
-                 for fixer in self.fixers
-                 for sub in fixer.find_iter_parsed(parsed))
+  # Override _matcher definition, as it's now computed based on fixers.
+  _matcher = attr.ib(init=False)
+
+  @_matcher.default
+  def _matcher_default(self):
+    return base_matchers.AnyOf(
+        *(fixer.matcher_with_meta for fixer in self.fixers))
 
 
 @attr.s(frozen=True, eq=False)
@@ -131,6 +132,10 @@ class SimplePythonFixer(ParsedPythonFixer):
 
     matcher = base_matchers.WithReplacements(self._matcher, meta_replacements)
     return search.PyMatcherRewritingSearcher.from_matcher(matcher, replacement)
+
+  @property
+  def matcher_with_meta(self):
+    return self._searcher._matcher  # TODO: refactor this to be not-gross.
 
   def find_iter_parsed(self, parsed):
     return self._searcher.find_iter_parsed(parsed)

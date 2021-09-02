@@ -165,6 +165,9 @@ class AnyOf(_NAryMatcher):
 
   def _match(self, context, candidate):
     for submatcher in self._matchers:
+      if submatcher.type_filter is not None and type(
+          candidate) not in submatcher.type_filter:
+        continue
       extra = submatcher.match(context, candidate)
       if extra is not None:
         return extra

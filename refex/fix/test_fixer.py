@@ -94,24 +94,6 @@ class PythonFixerFrameworkTest(parameterized.TestCase):
             [_substitution(message='a'),
              _substitution(message='b')])
 
-  def test_discards_overlap(self):
-    """PythonFixer discards overlapping matches in a consistent way."""
-    # we want to have both a small fix that sorts before the big fix, and
-    # a small fix that sorts after it, to test discards in both directions.
-    small_fixers = [
-        _search_replace_fixer('a', 'x', message='small'),
-        _search_replace_fixer('b', 'x', message='small'),
-    ]
-    big_fixer = _search_replace_fixer('a + b', 'x')
-    for i, small_fixer in enumerate(small_fixers):
-      pyfixers = [small_fixer, big_fixer]
-      for python_fixers in [pyfixers, pyfixers[::-1]]:
-        fx = fixer.CombiningPythonFixer(python_fixers)
-        with self.subTest(small_fixer=i, reversed=python_fixers != pyfixers):
-          self.assertEqual(
-              list(search.find_iter(fx, 'a + b', 'foo.py')),
-              [_substitution(message='small')])
-
   def test_discards_rewrite_error(self):
     # If we knew how to trigger a rewrite error, we'd just fix the bug, so let's
     # make one up.
