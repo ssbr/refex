@@ -118,10 +118,11 @@ class RewriteStringTest(absltest.TestCase):
         matcher=syntax_matchers.ExprPattern('$obj.attr'),
         replacement=syntactic_template.PythonTemplate(u'$obj.other'),
     )
+    searcher = fixer.CombiningPythonFixer([fix])
 
     source = 'my_obj.attr + other_obj.attr'
     self.assertEqual('my_obj.other + other_obj.other',
-                     search.rewrite_string(fix, source, 'example.py'))
+                     search.rewrite_string(searcher, source, 'example.py'))
 
 
 def _sub_string(s, sub):

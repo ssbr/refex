@@ -22,10 +22,12 @@ from absl.testing import parameterized
 
 from refex import search
 from refex.fix.fixers import modern_python_fixers
+from refex.fix import fixer
 
 
-def _rewrite(fixer, source):
-  return search.rewrite_string(fixer, source, 'example.py')
+def _rewrite(fx, source):
+  searcher = fixer.CombiningPythonFixer([fx])
+  return search.rewrite_string(searcher, source, 'example.py')
 
 
 class ModernPythonFixersTest(parameterized.TestCase):

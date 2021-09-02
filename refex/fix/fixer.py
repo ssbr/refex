@@ -35,8 +35,7 @@ from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
 
 
-class ParsedPythonFixer(
-    six.with_metaclass(abc.ABCMeta, search.BasePythonSearcher)):
+class PythonFixer(metaclass=abc.ABCMeta):
   """Abstract base class for python-specific fixers operating via matchers."""
 
   # Test helper methods:
@@ -57,7 +56,7 @@ class ParsedPythonFixer(
 @attr.s(frozen=True)
 class CombiningPythonFixer(search.FileRegexFilteredSearcher,
                            search.BasePythonRewritingSearcher):
-  """Combining fixer for ParsedPythonFixer, sharing common work.
+  """Combining fixer for ``PythonFixer``, sharing common work.
 
   This combines all of the matchers (``matcher_with_meta``) into one big
   ``AnyOf``, allowing for optimized traversal.
@@ -75,7 +74,7 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
 
 
 @attr.s(frozen=True, eq=False)
-class SimplePythonFixer(ParsedPythonFixer):
+class SimplePythonFixer(PythonFixer):
   r"""A simple find-replace fixer.
 
   All fixers must be able to be re-applied repeatedly, so that they can be
@@ -107,38 +106,28 @@ class SimplePythonFixer(ParsedPythonFixer):
   _example_replacement = attr.ib(default=None)  # type: Optional[Text]
   _significant = attr.ib(default=True)  # type: bool
 
-  _searcher = attr.ib(init=False, repr=False)
-
-  @_searcher.default
-  def _searcher_default(self):
+  @cached_property.cached_property
+  def matcher_with_meta(self):
     if isinstance(self._replacement, formatting.Template):
-      replacement = {search.ROOT_LABEL: self._replacement}
+      replacements = {search.ROOT_LABEL: self._replacement}
     else:
-      replacement = self._replacement
+      replacements = self._replacement
 
-    meta_replacements = {}
     if self._message is not None:
-      meta_replacements[search.MESSAGE_LABEL] = formatting.LiteralTemplate(
+      replacements[search.MESSAGE_LABEL] = formatting.LiteralTemplate(
           self._message)
     if self._url is not None:
-      meta_replacements[search.URL_LABEL] = formatting.LiteralTemplate(
-          self._url)
+      replacements[search.URL_LABEL] = formatting.LiteralTemplate(self._url)
     if self._category is not None:
-      meta_replacements[search.CATEGORY_LABEL] = formatting.LiteralTemplate(
+      replacements[search.CATEGORY_LABEL] = formatting.LiteralTemplate(
           self._category)
     if self._significant:
-      meta_replacements[search.SIGNIFICANT_LABEL] = formatting.LiteralTemplate(
+      replacements[search.SIGNIFICANT_LABEL] = formatting.LiteralTemplate(
           'HACK_TRUE')
 
-    matcher = base_matchers.WithReplacements(self._matcher, meta_replacements)
-    return search.PyMatcherRewritingSearcher.from_matcher(matcher, replacement)
-
-  @property
-  def matcher_with_meta(self):
-    return self._searcher._matcher  # TODO: refactor this to be not-gross.
-
-  def find_iter_parsed(self, parsed):
-    return self._searcher.find_iter_parsed(parsed)
+    return base_matchers.WithReplacements(
+        base_matchers.SystemBind(search.ROOT_LABEL, self._matcher),
+        replacements)
 
   def example_fragment(self):
     if self._example_fragment is not None:
