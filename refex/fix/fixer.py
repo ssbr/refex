@@ -64,6 +64,14 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
   fixers = attr.ib()  # type: List[search.BasePythonSearcher]
   include_regex = attr.ib(default=r'.*[.]py$')
 
+  @fixers.validator
+  def _fixers_validator(self, attribute, fixers):
+    for i, fixer in enumerate(fixers):
+      if fixer.matcher_with_meta.type_filter is None:
+        raise ValueError(
+            f'Overbroad fixer (#{i}) will try to run on EVERY ast node, instead of a small set: {fixer}'
+        )
+
   # Override _matcher definition, as it's now computed based on fixers.
   _matcher = attr.ib(init=False)
 

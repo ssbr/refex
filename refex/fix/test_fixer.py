@@ -97,7 +97,7 @@ class PythonFixerFrameworkTest(parameterized.TestCase):
   def test_discards_rewrite_error(self):
     # If we knew how to trigger a rewrite error, we'd just fix the bug, so let's
     # make one up.
-    fx = fixer.CombiningPythonFixer([_search_replace_fixer('$x', '$x')])
+    fx = fixer.CombiningPythonFixer([_search_replace_fixer('a', 'a')])
     with mock.patch.object(
         syntactic_template.PythonExprTemplate,
         'substitute_match',

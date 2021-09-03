@@ -739,6 +739,10 @@ class NamedFunctionDefinition(matcher.Matcher):
   def _match(self, context, candidate):
     return self._matcher.match(context, candidate)
 
+  @cached_property.cached_property
+  def type_filter(self):
+    return self._matcher.type_filter
+
 
 @matcher.safe_to_eval
 @attr.s(frozen=True)
@@ -793,6 +797,10 @@ class WithTopLevelImport(matcher.Matcher):
         imports[self._module_name] == self._as_name):
       return self._submatcher.match(context, candidate)
     return None
+
+  @cached_property.cached_property
+  def type_filter(self):
+    return self._submatcher.type_filter
 
 
 def _top_level_imports(tree):
