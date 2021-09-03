@@ -20,7 +20,7 @@ from __future__ import print_function
 
 import abc
 import operator
-from typing import Callable, List, Mapping, Optional, Text, TypeVar
+from typing import Callable, List, Mapping, Optional, Text, Union, TypeVar
 
 import attr
 import cached_property
@@ -61,7 +61,7 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
   This combines all of the matchers (``matcher_with_meta``) into one big
   ``AnyOf``, allowing for optimized traversal.
   """
-  fixers = attr.ib()  # type: List[search.BasePythonSearcher]
+  fixers = attr.ib(type=List[PythonFixer])
   include_regex = attr.ib(default=r'.*[.]py$')
 
   @fixers.validator

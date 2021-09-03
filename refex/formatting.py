@@ -515,6 +515,8 @@ class Template(six.with_metaclass(abc.ABCMeta)):
     """Returns the set of metavariables present in the template."""
     return frozenset()
 
+  template: str
+
 
 def stringify_matches(matches):
   stringified = {}
