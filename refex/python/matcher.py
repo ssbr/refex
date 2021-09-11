@@ -182,9 +182,7 @@ _IS_SUBMATCHER_ATTRIB = __name__ + '._IS_SUBMATCHER_ATTRIB'
 _IS_SUBMATCHER_LIST_ATTRIB = __name__ + '._IS_SUBMATCHER_LIST_ATTRIB'
 
 
-def submatcher_attrib(
-    *args,
-    **kwargs: Any):  # TODO: make walk a kwarg when Py2 support is dropped.
+def submatcher_attrib(*args, walk: bool = True, **kwargs: Any):
   """Creates an attr.ib that is marked as a submatcher.
 
   This will cause the matcher to be automatically walked as part of the
@@ -199,15 +197,13 @@ def submatcher_attrib(
   Returns:
     An attr.ib()
   """
-  if kwargs.pop('walk', True):
+  if walk:
     kwargs.setdefault('metadata', {})[_IS_SUBMATCHER_ATTRIB] = True
   kwargs.setdefault('converter', coerce)
   return attr.ib(*args, **kwargs)
 
 
-def submatcher_list_attrib(
-    *args,
-    **kwargs: Any):  # TODO: make walk a kwarg when Py2 support is dropped.
+def submatcher_list_attrib(*args, walk: bool = True, **kwargs: Any):
   """Creates an attr.ib that is marked as an iterable of submatchers.
 
   This will cause the matcher to be automatically walked as part of the
@@ -222,7 +218,7 @@ def submatcher_list_attrib(
   Returns:
     An attr.ib()
   """
-  if kwargs.pop('walk', True):
+  if walk:
     kwargs.setdefault('metadata', {})[_IS_SUBMATCHER_LIST_ATTRIB] = True
   kwargs.setdefault('converter', _coerce_list)
   return attr.ib(*args, **kwargs)
@@ -666,8 +662,8 @@ class MatchInfo(object):
   """
   match = attr.ib(type=_match.Match)
   # TODO: also add a top-level `replacement` variable, replacing the magic root.
-  bindings = attr.ib(factory=dict, type=Dict[str, _match.Match])
-  replacements = attr.ib(factory=dict, type=Dict[str, _match.Match])
+  bindings = attr.ib(factory=dict, type=Dict[str, BoundValue])
+  replacements = attr.ib(factory=dict, type=Dict[str, formatting.Template])
 
 
 def _stringify_candidate(context, candidate):
