@@ -56,9 +56,9 @@ def main(argv):
     except KeyError:
       pass
     else:
-      print(
-          pygments.highlight(tb, lexers.PythonTracebackLexer(),
-                             formatters.Terminal256Formatter()))
+      lexer = lexers.PythonTracebackLexer()  # pytype: disable=module-attr
+      formatter = formatters.Terminal256Formatter()  # pytype: disable=module-attr
+      print(pygments.highlight(tb, lexer, formatter))
 
 
 if __name__ == '__main__':
