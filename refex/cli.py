@@ -278,6 +278,7 @@ class _AddSubAction(argparse.Action):
 
 
 class _AddNamedSubAction(argparse.Action):
+  """Adds a named substitution, See --named-sub docs."""
 
   def __init__(self, option_strings, dest, nargs=None, **kwargs):
     if nargs is not None:
@@ -291,15 +292,15 @@ class _AddNamedSubAction(argparse.Action):
       old_sub = search_replaces[-1].sub = {}
     if search.ROOT_LABEL in old_sub:
       parser.error(
-          "Can't combine --sub and --named-sub (tried to merge --sub {} and --named-sub {}".format(old_sub[search.ROOT_LABEL], value))
+          "Can't combine --sub and --named-sub (tried to merge "
+          f'--sub {old_sub[search.ROOT_LABEL]} and --named-sub {value})')
 
     name, sep, pattern = value.partition('=')
     if not sep:
-      parser.error(
-          '--named-sub incorrectly specified, missing "=": {}'.format(value))
+      parser.error(f'--named-sub incorrectly specified, missing "=": {value}')
     if name in old_sub:
-      parser.error(
-          '--named-sub specified twice for the same key: {}, {}'.format(old_sub[name], pattern))
+      parser.error('--named-sub specified twice for the same key: '
+                   f'{old_sub[name]}, {pattern}')
     old_sub[name] = pattern
 
 
@@ -383,11 +384,11 @@ def run_cli(argv,
 
     def main_for_absl(argv):
       options = _parse_options(argv[1:], parser)
-      runner = get_runner(parser, options)
-      files = get_files(runner, options)
 
       def _run():
         """A wrapper function for profiler.runcall."""
+        runner = get_runner(parser, options)
+        files = get_files(runner, options)
         run(runner, files, bug_report_url, version)
 
       if options.profile_to:
@@ -585,7 +586,10 @@ def _add_rewriter_arguments(parser):
       action='store_true',
       default=False,
       dest='list_files',
-      help='Print out only the matched file names. If substitution is performed (e.g. with `--sub`), this corresponds with only the changed files.')
+      help=('Print out only the matched file names. If substitution is'
+            ' performed (e.g. with `--sub`), this corresponds with only the'
+            ' changed files.'),
+  )
 
   grep_options.add_argument(
       '--force-enable',
@@ -850,7 +854,9 @@ def runner_from_options(parser, options) -> RefexRunner:
       parser.error(str(e))
 
   if len(searchers) == 0:
-    raise AssertionError("Bug in refex: there should always be a (possibly empty) search-replace pair.")
+    raise AssertionError(
+        'Bug in refex: there should always be a (possibly empty)'
+        ' search-replace pair.')
   elif len(searchers) == 1:
     [searcher] = searchers
   else:
@@ -881,10 +887,21 @@ def runner_from_options(parser, options) -> RefexRunner:
   )
 
 
-def files_from_options(runner, options) -> List[Tuple[str, str]]:
+def files_from_options(
+    runner: RefexRunner,
+    options,
+) -> Iterable[Tuple[str, str]]:
   """Returns the list of files specified by the command line options."""
-  del runner
-  return list(zip(options.files, options.files))
+  del runner  # unused
+  for path in options.files:
+    if not options.recursive or not os.path.isdir(path):
+      yield (path, path)
+      continue
+
+    for path_to, unused_dirnames, files in os.walk(path):
+      for fname in files:
+        recursive_path = os.path.join(path_to, fname)
+        yield (recursive_path, recursive_path)
 
 
 def main(argv=None, bug_report_url=_BUG_REPORT_URL, version=None):
@@ -900,7 +917,6 @@ def main(argv=None, bug_report_url=_BUG_REPORT_URL, version=None):
           e=e,
           long_desc='(refex needs to be installed to have version information)',
       )
-  parser = argument_parser(version=version)
   run_cli(
       argv,
       argument_parser(version=version),
