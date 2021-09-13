@@ -19,17 +19,14 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-import operator
-from typing import Callable, List, Mapping, Optional, Text, Union, TypeVar
+import string
+from typing import Callable, List, Mapping, Optional, Text, TypeVar, Union
 
 import attr
 import cached_property
-import six
 
 from refex import formatting
-from refex import future_string
 from refex import search
-from refex import substitution
 from refex.python import matcher
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
@@ -62,7 +59,7 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
   ``AnyOf``, allowing for optimized traversal.
   """
   fixers = attr.ib(type=List[PythonFixer])
-  include_regex = attr.ib(default=r'.*[.]py$')
+  include_regex = attr.ib(default=r'.*[.]py$', type=str)
 
   @fixers.validator
   def _fixers_validator(self, attribute, fixers):
@@ -73,10 +70,10 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
         )
 
   # Override _matcher definition, as it's now computed based on fixers.
-  _matcher = attr.ib(init=False)
+  matcher = attr.ib(init=False, type=matcher.Matcher)
 
-  @_matcher.default
-  def _matcher_default(self):
+  @matcher.default
+  def matcher_default(self):
     return base_matchers.AnyOf(
         *(fixer.matcher_with_meta for fixer in self.fixers))
 
@@ -104,15 +101,15 @@ class SimplePythonFixer(PythonFixer):
                          corresponding example_replacement is as well.
     significant: Whether the suggestions are going to be significant.
   """
-  _matcher = attr.ib()  # type: matcher.Matcher
-  _replacement = attr.ib(
-  )  # type: Union[formatting.Template, Mapping[Text, formatting.Template]]
-  _message = attr.ib(default=None)  # type: Optional[six.text_type]
-  _url = attr.ib(default=None)  # type: Optional[six.text_type]
-  _category = attr.ib(default=None)  # type: Text
-  _example_fragment = attr.ib(default=None)  # type: Optional[Text]
-  _example_replacement = attr.ib(default=None)  # type: Optional[Text]
-  _significant = attr.ib(default=True)  # type: bool
+  _matcher = attr.ib(type=matcher.Matcher)
+  _replacement = attr.ib(type=Union[formatting.Template,
+                                    Mapping[Text, formatting.Template]])
+  _message = attr.ib(default=None, type=Optional[str])
+  _url = attr.ib(default=None, type=Optional[str])
+  _category = attr.ib(default=None, type=str)
+  _example_fragment = attr.ib(default=None, type=Optional[str])
+  _example_replacement = attr.ib(default=None, type=Optional[str])
+  _significant = attr.ib(default=True, type=bool)
 
   @cached_property.cached_property
   def matcher_with_meta(self):
@@ -146,7 +143,7 @@ class SimplePythonFixer(PythonFixer):
       return None
     if self._matcher.restrictions:
       return None
-    return future_string.Template(self._matcher.pattern).substitute(
+    return string.Template(self._matcher.pattern).substitute(
         ImmutableDefaultDict(lambda k: k))
 
   def example_replacement(self):
@@ -159,7 +156,7 @@ class SimplePythonFixer(PythonFixer):
       raise TypeError(
           'Cannot autogenerate an example replacement unless the replacement'
           ' template applies to the whole match.')
-    return future_string.Template(self._replacement.template).substitute(
+    return string.Template(self._replacement.template).substitute(
         ImmutableDefaultDict(lambda k: k))
 
 
@@ -170,10 +167,7 @@ ValueType = TypeVar('ValueType')
 @attr.s(frozen=True)
 class ImmutableDefaultDict(Mapping[KeyType, ValueType]):
   """Immutable mapping that returns factory(key) as a value, always."""
-
-  # TODO: Callable[[KeyType], ValueType]
-  # It isn't supported yet in pytype. :(
-  _factory = attr.ib()  # type: Callable
+  _factory = attr.ib(type=Callable[[KeyType], ValueType])
 
   def __getitem__(self, key: KeyType) -> ValueType:
     return self._factory(key)

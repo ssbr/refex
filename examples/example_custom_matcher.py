@@ -23,8 +23,6 @@ import attr
 
 from refex.python import matcher
 from refex.python.matchers import base_matchers
-from refex import search
-from refex import match
 
 
 @attr.s(frozen=True)

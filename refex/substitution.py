@@ -150,7 +150,7 @@ class Substitution(object):
                   expected_type=six.text_type.__name__,
                   actual_type=type(replacement).__name__))
 
-  def relative_to_span(self, start: int, end: int) -> "Substitution":
+  def relative_to_span(self, start: int, end: int) -> Optional['Substitution']:
     """Returns a new substitution that is offset relative to the provided span.
 
     If ``sub`` is a :class:`Substitution` for ``s``, then

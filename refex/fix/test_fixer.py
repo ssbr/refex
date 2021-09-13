@@ -18,15 +18,14 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals  # for convenience.
 
+import string
 from unittest import mock
-import re
 
 from absl.testing import absltest
 from absl.testing import parameterized
 import attr
 
 from refex import formatting
-from refex import future_string
 from refex import search
 from refex import substitution
 from refex.fix import find_fixer
@@ -319,7 +318,7 @@ class ImmutableDefaultDictTest(absltest.TestCase):
 
   def test_replacement(self):
     self.assertEqual(
-        future_string.Template('$a == $b').substitute(
+        string.Template('$a == $b').substitute(
             fixer.ImmutableDefaultDict(lambda k: k)), 'a == b')
 
   def test_len(self):

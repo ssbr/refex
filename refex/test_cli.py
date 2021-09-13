@@ -20,12 +20,12 @@ from __future__ import print_function
 import argparse
 import contextlib
 import json
-from unittest import mock
 import os
 import re
 import sys
 import textwrap
 import unittest
+from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized

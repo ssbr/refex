@@ -81,8 +81,9 @@ class StringMatch(Match):
   """A match which can be a source for substitution.
 
   .. attribute:: string
-  .. attribute:: span"""
-  string = attr.ib()
+  .. attribute:: span
+  """
+  string = attr.ib(type=str)
 
 
 @attr.s(frozen=True)
@@ -90,8 +91,9 @@ class SpanMatch(StringMatch):
   """A match which can be both a source *and* destination for substitution.
 
   .. attribute:: string
-  .. attribute:: span"""
-  span = attr.ib()
+  .. attribute:: span
+  """
+  span = attr.ib(type=Tuple[int, int])
 
   @classmethod
   def from_text(cls, text: str, span: Tuple[int, int]) -> "SpanMatch":
@@ -108,4 +110,4 @@ class ObjectMatch(Match):
   .. attribute:: span
   """
   #: An object associated with the match.
-  matched = attr.ib()  # type: Any
+  matched = attr.ib(type=Any)

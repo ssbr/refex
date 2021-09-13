@@ -502,7 +502,7 @@ class TypeIs(matcher.Matcher):
   (This does *not* check any type information for the code that this candidate
   AST node might represent.)
   """
-  _type = attr.ib()  # type: type
+  _type = attr.ib(type=type)
 
   def _match(self, context, candidate):
     if type(candidate) == self._type:
@@ -540,9 +540,9 @@ class MatchesRegex(matcher.Matcher):
   The bound matches are neither lexical nor syntactic, but purely on codepoint
   spans.
   """
-  _regex = attr.ib()  # type: str
+  _regex = attr.ib(type=str)
   _subpattern = matcher.submatcher_attrib(
-      default=Anything())  # type: matcher.Matcher
+      default=Anything(), type=matcher.Matcher)
 
   @cached_property.cached_property
   def _wrapped_regex(self):
@@ -593,7 +593,7 @@ _file_matches_regex = weakref.WeakKeyDictionary()
 @attr.s(frozen=True)
 class FileMatchesRegex(matcher.Matcher):
   """Matches iff ``regex`` matches anywhere in the candidate's file."""
-  _regex = attr.ib()  # type: str
+  _regex = attr.ib(type=str)
 
   @cached_property.cached_property
   def _compiled(self):
@@ -659,7 +659,7 @@ class ItemsAre(matcher.Matcher):
   """
 
   # store the init parameters for a pretty repr and .bind_variables
-  _matchers = matcher.submatcher_list_attrib()  # type: List[matcher.Matcher]
+  _matchers = matcher.submatcher_list_attrib(type=List[matcher.Matcher])
 
   @matcher.accumulating_matcher
   def _match(self, context, candidate):
@@ -710,7 +710,7 @@ class InLines(matcher.Matcher):
 
   # Lines should normally be either a set or for contiguous sequences, a `range`
   # object produced by calling `range(x, y)`
-  lines = attr.ib()  # type: Container[int]
+  lines = attr.ib(type=Container[int])
 
   def _match(self, context, candidate):
 
