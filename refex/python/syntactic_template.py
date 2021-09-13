@@ -133,8 +133,8 @@ class _BasePythonTemplate(formatting.Template):
     template: The source template
   """
   template = attr.ib(type=Text)
-  _lexical_template = attr.ib(repr=False, init=False)  # type: _LexicalTemplate
-  _ast_matcher = attr.ib(repr=False, init=False)  # type: matcher.Matcher
+  _lexical_template = attr.ib(repr=False, init=False, type=_LexicalTemplate)
+  _ast_matcher = attr.ib(repr=False, init=False, type=matcher.Matcher)
 
   def __attrs_post_init__(self):
     if not isinstance(self.template, six.text_type):

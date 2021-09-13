@@ -25,7 +25,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import re
-from typing import Iterable, Mapping, Optional, Text
+from typing import Iterable, Mapping, Optional
 
 import asttokens
 import attr
@@ -50,7 +50,7 @@ class ParsedFile(object):
     line_numbers: A cache for line number <-> codepoint offset conversion.
   """
 
-  text = attr.ib(type=Text)
+  text = attr.ib(type=str)
   path = attr.ib(type=str)
   pragmas = attr.ib(type=Iterable["Pragma"])
 
@@ -87,8 +87,8 @@ class Pragma(object):
     start: The start (codepoint offset) of the pragma in the file. Inclusive.
     end: The end (codepoint offset) of the pragma in the file. Exclusive.
   """
-  tag = attr.ib(type=Text)
-  data = attr.ib(type=Mapping[Text, Text])
+  tag = attr.ib(type=str)
+  data = attr.ib(type=Mapping[str, str])
   start = attr.ib(type=int)
   end = attr.ib(type=int)
 

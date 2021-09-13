@@ -25,7 +25,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals  # for convenience
 
-from refex import future_string
+import string
+
 from refex.fix import fixer
 from refex.python import syntactic_template
 from refex.python.matchers import syntax_matchers
@@ -45,8 +46,8 @@ def assert_alias_fixer(old_expr, new_expr):
   return fixer.SimplePythonFixer(
       message=('{old} is a deprecated alias for {new} in the unittest module.'
                .format(
-                   old=future_string.Template(old_expr).substitute(dotdotdot),
-                   new=future_string.Template(new_expr).substitute(dotdotdot))),
+                   old=string.Template(old_expr).substitute(dotdotdot),
+                   new=string.Template(new_expr).substitute(dotdotdot))),
       matcher=syntax_matchers.ExprPattern(old_expr),
       replacement=syntactic_template.PythonExprTemplate(new_expr),
       url='https://docs.python.org/3/library/unittest.html#deprecated-aliases',
@@ -74,8 +75,8 @@ def assert_message_fixer(old_expr, new_expr, method):
   dotdotdot = fixer.ImmutableDefaultDict(lambda _: '...')
   return fixer.SimplePythonFixer(
       message=('%s will give more detailed error information than %s.' %
-               (future_string.Template(new_expr).substitute(dotdotdot),
-                future_string.Template(old_expr).substitute(dotdotdot))),
+               (string.Template(new_expr).substitute(dotdotdot),
+                string.Template(old_expr).substitute(dotdotdot))),
       matcher=syntax_matchers.ExprPattern(old_expr),
       replacement=syntactic_template.PythonExprTemplate(new_expr),
       url=(

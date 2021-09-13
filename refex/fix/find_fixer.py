@@ -56,7 +56,7 @@ def _register_builtins():
 _register_builtins()
 
 
-def from_pattern(fixer_pattern):
+def from_pattern(fixer_pattern: str) -> fixer.CombiningPythonFixer:
   """Provide a fixer that combines all the fixers specified in `fixer_pattern`.
 
   To get all the default fixers, pass '*'. Otherwise, to get a group of fixers
