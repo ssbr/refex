@@ -19,13 +19,13 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+import string
 from typing import Callable, List, Mapping, Optional, Text, TypeVar, Union
 
 import attr
 import cached_property
 
 from refex import formatting
-from refex import future_string
 from refex import search
 from refex.python import matcher
 from refex.python.matchers import base_matchers
@@ -143,7 +143,7 @@ class SimplePythonFixer(PythonFixer):
       return None
     if self._matcher.restrictions:
       return None
-    return future_string.Template(self._matcher.pattern).substitute(
+    return string.Template(self._matcher.pattern).substitute(
         ImmutableDefaultDict(lambda k: k))
 
   def example_replacement(self):
@@ -156,7 +156,7 @@ class SimplePythonFixer(PythonFixer):
       raise TypeError(
           'Cannot autogenerate an example replacement unless the replacement'
           ' template applies to the whole match.')
-    return future_string.Template(self._replacement.template).substitute(
+    return string.Template(self._replacement.template).substitute(
         ImmutableDefaultDict(lambda k: k))
 
 

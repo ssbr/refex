@@ -21,10 +21,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals  # for convenience
 
+import string
 import textwrap
 
 from refex import formatting
-from refex import future_string
 from refex.fix import fixer
 from refex.python import matcher as matcher_
 from refex.python import syntactic_template
@@ -60,8 +60,8 @@ def idiom_fixer(
   dotdotdot = fixer.ImmutableDefaultDict(lambda _: '...')
   return fixer.SimplePythonFixer(
       message=('This could be more Pythonic: %s -> %s.' %
-               ((future_string.Template(old_expr).substitute(dotdotdot),
-                 future_string.Template(new_expr).substitute(dotdotdot)))),
+               ((string.Template(old_expr).substitute(dotdotdot),
+                 string.Template(new_expr).substitute(dotdotdot)))),
       matcher=syntax_matchers.ExprPattern(old_expr),
       replacement=syntactic_template.PythonExprTemplate(new_expr),
       url=url,

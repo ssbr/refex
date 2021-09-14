@@ -76,6 +76,7 @@ import functools
 import itertools
 import operator
 import sre_parse
+import string
 from typing import (Any, Dict, Iterable, Iterator, Mapping, Optional, Set, Text,
                     Tuple)
 
@@ -84,7 +85,6 @@ import cached_property
 import colorama
 import six
 
-from refex import future_string
 from refex import match as _match
 from refex import parsed_file
 from refex import substitution
@@ -550,11 +550,11 @@ class ShTemplate(Template):
   #: The source template.
   template = attr.ib(type=str)
 
-  _template = attr.ib(repr=False, init=False, type=future_string.Template)
+  _template = attr.ib(repr=False, init=False, type=string.Template)
 
   @_template.default
   def _template_default(self):
-    return future_string.Template(self.template)
+    return string.Template(self.template)
 
   def substitute_match(self, parsed, match, matches):
     del match  # unused
