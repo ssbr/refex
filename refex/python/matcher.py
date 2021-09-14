@@ -662,8 +662,8 @@ class MatchInfo(object):
   """
   match = attr.ib(type=_match.Match)
   # TODO: also add a top-level `replacement` variable, replacing the magic root.
-  bindings = attr.ib(factory=dict, type=Dict[str, _match.Match])
-  replacements = attr.ib(factory=dict, type=Dict[str, _match.Match])
+  bindings = attr.ib(factory=dict, type=Dict[str, BoundValue])
+  replacements = attr.ib(factory=dict, type=Dict[str, formatting.Template])
 
 
 def _stringify_candidate(context, candidate):

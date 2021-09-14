@@ -630,7 +630,7 @@ class BaseRewritingSearcher(AbstractSearcher):
   def key_span_for_dict(
       self,
       parsed: parsed_file.ParsedFile,
-      match_dict: Iterable[Mapping[MatchKey, match.Match]],
+      match_dict: Mapping[MatchKey, match.Match],
   ) -> Optional[Tuple[int, int]]:
     """Returns the ``key_span`` that the final ``Substitution`` will have."""
     return None
@@ -682,12 +682,10 @@ class RegexSearcher(BaseRewritingSearcher):
     missing_labels = formatting.template_variables(
         self.templates) - pattern_labels
     if missing_labels:
+      groups = ', '.join(f'`{g}`' for g in sorted(map(str, missing_labels)))
       raise ValueError(
-          'The substitution template(s) referenced groups not available in the regex (`{self._compiled.pattern}`): {groups}'
-          .format(
-              self=self,
-              groups=', '.join(
-                  '`{}`'.format(g) for g in sorted(map(str, missing_labels)))))
+          f'The substitution template(s) referenced groups not available in the regex (`{self._compiled.pattern}`): {groups}'
+      )
 
   @classmethod
   def from_pattern(cls, pattern: str,  templates: Optional[Dict[str, formatting.Template]]):
@@ -734,7 +732,7 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
   _matcher = attr.ib()
 
   @classmethod
-  def from_matcher(cls, matcher, templates: Optional[Dict[str, formatting.Template]]):
+  def from_matcher(cls, matcher, templates: Dict[str, formatting.Template]):
     """Creates a searcher from an evaluated matcher, and adds a root label."""
     # We wrap the evaluated matcher in a SystemBind() that is sort of like
     # "group 0" for regexes.
