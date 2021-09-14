@@ -24,9 +24,8 @@ import unittest
 from absl.testing import absltest
 from absl.testing import parameterized
 import attr
-import six
-
 from refex import future_string
+import six
 
 
 @attr.s

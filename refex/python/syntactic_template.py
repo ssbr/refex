@@ -46,14 +46,13 @@ from typing import Text
 from absl import logging
 import attr
 import cached_property
-import six
-
 from refex import formatting
 from refex.python import matcher
 from refex.python import python_pattern
 from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
+import six
 
 
 @attr.s(frozen=True)

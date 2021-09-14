@@ -18,20 +18,18 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-from unittest import mock
 import textwrap
 import unittest
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import six
-
+from unittest import mock
 from refex.python import matcher
 from refex.python import matcher_test_util
 from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
+import six
 
 _FAKE_CONTEXT = matcher.MatchContext(matcher.parse_ast('', 'foo.py'))
 

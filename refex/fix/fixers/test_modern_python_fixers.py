@@ -21,8 +21,8 @@ from absl.testing import absltest
 from absl.testing import parameterized
 
 from refex import search
-from refex.fix.fixers import modern_python_fixers
 from refex.fix import fixer
+from refex.fix.fixers import modern_python_fixers
 
 
 def _rewrite(fx, source):

@@ -21,12 +21,11 @@ import unittest
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import six
-
 from refex import match
 from refex.python import matcher
 from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
+import six
 
 
 def expression(e):

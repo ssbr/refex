@@ -19,8 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
-import operator
-from typing import Callable, List, Mapping, Optional, Text, Union, TypeVar
+from typing import Callable, List, Mapping, Optional, Text, TypeVar, Union
 
 import attr
 import cached_property
@@ -28,7 +27,6 @@ import cached_property
 from refex import formatting
 from refex import future_string
 from refex import search
-from refex import substitution
 from refex.python import matcher
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers

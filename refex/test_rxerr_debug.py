@@ -1,12 +1,11 @@
 """Tests for refex.rxerr_debug."""
 
-import contextlib
 import io
 import json
 import shlex
 
 from absl.testing import absltest
-
+import contextlib
 from refex import rxerr_debug
 
 

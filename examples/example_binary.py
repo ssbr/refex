@@ -26,7 +26,6 @@ from __future__ import unicode_literals
 import sys
 
 from refex import cli
-from refex import formatting
 from refex import search
 from refex.python import syntactic_template
 from refex.python.matchers import syntax_matchers
