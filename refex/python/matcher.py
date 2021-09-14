@@ -176,12 +176,15 @@ def _coerce_list(values):
   return [coerce(v) for v in values]
 
 
+# TODO(b/199577701): drop the **kwargs: Any in the *_attrib functions.
+
 _IS_SUBMATCHER_ATTRIB = __name__ + '._IS_SUBMATCHER_ATTRIB'
 _IS_SUBMATCHER_LIST_ATTRIB = __name__ + '._IS_SUBMATCHER_LIST_ATTRIB'
 
 
 def submatcher_attrib(
-    *args, **kwargs):  # TODO: make walk a kwarg when Py2 support is dropped.
+    *args,
+    **kwargs: Any):  # TODO: make walk a kwarg when Py2 support is dropped.
   """Creates an attr.ib that is marked as a submatcher.
 
   This will cause the matcher to be automatically walked as part of the
@@ -203,7 +206,8 @@ def submatcher_attrib(
 
 
 def submatcher_list_attrib(
-    *args, **kwargs):  # TODO: make walk a kwarg when Py2 support is dropped.
+    *args,
+    **kwargs: Any):  # TODO: make walk a kwarg when Py2 support is dropped.
   """Creates an attr.ib that is marked as an iterable of submatchers.
 
   This will cause the matcher to be automatically walked as part of the
