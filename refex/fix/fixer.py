@@ -24,7 +24,6 @@ from typing import Callable, List, Mapping, Optional, Text, Union, TypeVar
 
 import attr
 import cached_property
-import six
 
 from refex import formatting
 from refex import future_string
@@ -62,7 +61,7 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
   ``AnyOf``, allowing for optimized traversal.
   """
   fixers = attr.ib(type=List[PythonFixer])
-  include_regex = attr.ib(default=r'.*[.]py$')
+  include_regex = attr.ib(default=r'.*[.]py$', type=str)
 
   @fixers.validator
   def _fixers_validator(self, attribute, fixers):
@@ -73,7 +72,7 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
         )
 
   # Override _matcher definition, as it's now computed based on fixers.
-  matcher = attr.ib(init=False)
+  matcher = attr.ib(init=False, type=matcher.Matcher)
 
   @matcher.default
   def matcher_default(self):
@@ -104,15 +103,15 @@ class SimplePythonFixer(PythonFixer):
                          corresponding example_replacement is as well.
     significant: Whether the suggestions are going to be significant.
   """
-  _matcher = attr.ib()  # type: matcher.Matcher
-  _replacement = attr.ib(
-  )  # type: Union[formatting.Template, Mapping[Text, formatting.Template]]
-  _message = attr.ib(default=None)  # type: Optional[six.text_type]
-  _url = attr.ib(default=None)  # type: Optional[six.text_type]
-  _category = attr.ib(default=None)  # type: Text
-  _example_fragment = attr.ib(default=None)  # type: Optional[Text]
-  _example_replacement = attr.ib(default=None)  # type: Optional[Text]
-  _significant = attr.ib(default=True)  # type: bool
+  _matcher = attr.ib(type=matcher.Matcher)
+  _replacement = attr.ib(type=Union[formatting.Template,
+                                    Mapping[Text, formatting.Template]])
+  _message = attr.ib(default=None, type=Optional[str])
+  _url = attr.ib(default=None, type=Optional[str])
+  _category = attr.ib(default=None, type=str)
+  _example_fragment = attr.ib(default=None, type=Optional[str])  # type:
+  _example_replacement = attr.ib(default=None, type=Optional[str])
+  _significant = attr.ib(default=True, type=bool)
 
   @cached_property.cached_property
   def matcher_with_meta(self):
@@ -170,10 +169,7 @@ ValueType = TypeVar('ValueType')
 @attr.s(frozen=True)
 class ImmutableDefaultDict(Mapping[KeyType, ValueType]):
   """Immutable mapping that returns factory(key) as a value, always."""
-
-  # TODO: Callable[[KeyType], ValueType]
-  # It isn't supported yet in pytype. :(
-  _factory = attr.ib()  # type: Callable
+  _factory = attr.ib(type=Callable[[KeyType], ValueType])
 
   def __getitem__(self, key: KeyType) -> ValueType:
     return self._factory(key)
