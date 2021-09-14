@@ -46,18 +46,19 @@ def main(argv):
       source = failure['content']
     except KeyError:
       pass
-    with tempfile.NamedTemporaryFile(
-        mode='w', encoding='utf-8', suffix='.py', delete=False) as out_f:
-      out_f.write(source)
-      print('Content:', out_f.name)
+    else:
+      with tempfile.NamedTemporaryFile(
+          mode='w', encoding='utf-8', suffix='.py', delete=False) as out_f:
+        out_f.write(source)
+        print('Content:', out_f.name)
     try:
       tb = failure['traceback']
     except KeyError:
       pass
     else:
-      print(
-          pygments.highlight(tb, lexers.PythonTracebackLexer(),
-                             formatters.Terminal256Formatter()))
+      lexer = lexers.PythonTracebackLexer()  # pytype: disable=module-attr
+      formatter = formatters.Terminal256Formatter()  # pytype: disable=module-attr
+      print(pygments.highlight(tb, lexer, formatter))
 
 
 if __name__ == '__main__':

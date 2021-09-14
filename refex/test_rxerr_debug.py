@@ -29,6 +29,24 @@ class RxerrDebugTest(absltest.TestCase):
     # Instead, we can just run shlex.split() over it as a quick safety check.
     self.assertEqual(shlex.split(stdout.getvalue()), ['Command:'] + argv)
 
+  def test_traceback(self):
+    """Tests that the traceback shows up, ish."""
+    tb = ('Traceback (most recent call last):\n'
+          '  File "<stdin>", line 1, in <module>\n'
+          'SomeError: description\n')
+    path = self.create_tempfile(
+        content=json.dumps({'failures': {
+            'path': {
+                'traceback': tb
+            }
+        }})).full_path
+    stdout = io.StringIO()
+    with contextlib.redirect_stdout(stdout):
+      rxerr_debug.main(['rxerr_debug', path])
+    stdout = stdout.getvalue()
+    self.assertIn('SomeError', stdout)
+    self.assertIn('description', stdout)
+
 
 if __name__ == '__main__':
   absltest.main()
