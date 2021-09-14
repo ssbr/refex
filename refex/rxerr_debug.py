@@ -46,10 +46,11 @@ def main(argv):
       source = failure['content']
     except KeyError:
       pass
-    with tempfile.NamedTemporaryFile(
-        mode='w', encoding='utf-8', suffix='.py', delete=False) as out_f:
-      out_f.write(source)
-      print('Content:', out_f.name)
+    else:
+      with tempfile.NamedTemporaryFile(
+          mode='w', encoding='utf-8', suffix='.py', delete=False) as out_f:
+        out_f.write(source)
+        print('Content:', out_f.name)
     try:
       tb = failure['traceback']
     except KeyError:
