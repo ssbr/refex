@@ -110,7 +110,7 @@ from refex import match
 from refex import parsed_file
 from refex import substitution
 from refex.python import evaluate
-from refex.python import matcher
+from refex.python import matcher as _matcher
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
 
@@ -225,8 +225,8 @@ def _fixed_point(
   for i in range(max_iterations):
     rewritten = formatting.apply_substitutions(text, new_substitutions)
     try:
-      parsed = matcher.parse_ast(rewritten, parsed.path)
-    except matcher.ParseError as e:
+      parsed = _matcher.parse_ast(rewritten, parsed.path)
+    except _matcher.ParseError as e:
       logging.error(
           'Could not parse rewritten substitution in %s: %s\n'
           'Tried to rewrite text[%s:%s] == %r\n'
@@ -382,7 +382,7 @@ class PragmaSuppressedSearcher(WrappedSearcher):
 
   def find_iter_parsed(
       self,
-      parsed: matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
+      parsed: _matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
     return substitution.suppress_exclude_bytes(
         self.searcher.find_iter_parsed(parsed),
         _pragma_excluded_ranges(parsed),
@@ -488,7 +488,7 @@ class CombinedSearcher(AbstractSearcher):
 
 
 def _pragma_excluded_ranges(
-    parsed: matcher.PythonParsedFile) -> Mapping[Text, Sequence[Span]]:
+    parsed: _matcher.PythonParsedFile) -> Mapping[Text, Sequence[Span]]:
   """Returns ranges for the parsed file that were disabled by "disable" pragmas.
 
   "enable" pragmas override "disable" pragmas within their scope and vice versa.
@@ -513,7 +513,7 @@ def _pragma_excluded_ranges(
   return disabled
 
 
-def _pragma_ranges(parsed: matcher.PythonParsedFile,
+def _pragma_ranges(parsed: _matcher.PythonParsedFile,
                    key: str) -> MutableMapping[Text, MutableSequence[Span]]:
   """Returns the pragma-annotated ranges for e.g. suppress_exclude_bytes."""
   annotated_ranges = {}
@@ -638,7 +638,7 @@ class BaseRewritingSearcher(AbstractSearcher):
 
   def find_iter_parsed(
       self,
-      parsed: matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
+      parsed: _matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
     for match_dict, templates in self.find_dicts_parsed(parsed):
       try:
         replacements = formatting.rewrite_templates(parsed, match_dict,
@@ -692,7 +692,7 @@ class RegexSearcher(BaseRewritingSearcher):
     return cls(compiled=default_compile_regex(pattern), templates=templates)
 
   def find_dicts_parsed(
-      self, parsed: matcher.PythonParsedFile
+      self, parsed: _matcher.PythonParsedFile
   ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
       MatchKey, formatting.Template]]]:
     for m in self._compiled.finditer(parsed.text):
@@ -715,8 +715,8 @@ class BasePythonSearcher(AbstractSearcher):
   def parse(self, data: Text, filename: str):
     """Returns a :class:`refex.python.matcher.PythonParsedFile`."""
     try:
-      return matcher.parse_ast(data, filename)
-    except matcher.ParseError as e:
+      return _matcher.parse_ast(data, filename)
+    except _matcher.ParseError as e:
       # Probably Python 2. TODO: figure out how to handle this.
       raise SkipFileError(str(e))
 
@@ -729,7 +729,7 @@ class BasePythonSearcher(AbstractSearcher):
 class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
   """Searcher class using :mod``refex.python.matchers``."""
 
-  _matcher = attr.ib()
+  matcher = attr.ib()
 
   @classmethod
   def from_matcher(cls, matcher, templates: Dict[str, formatting.Template]):
@@ -741,18 +741,18 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
             base_matchers.SystemBind(ROOT_LABEL, matcher), templates))
 
   def find_dicts_parsed(
-      self, parsed: matcher.PythonParsedFile
+      self, parsed: _matcher.PythonParsedFile
   ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
       MatchKey, formatting.Template]]]:
-    for result in matcher.find_iter(self._matcher, parsed):
+    for result in _matcher.find_iter(self.matcher, parsed):
       matches = {
           bound_name: match.value
           for bound_name, match in result.bindings.items()
       }
       yield matches, result.replacements
 
-  def key_span_for_dict(self, parsed: matcher.PythonParsedFile,
-                              match_dict: Dict[str, match.Match]):
+  def key_span_for_dict(self, parsed: _matcher.PythonParsedFile,
+                        match_dict: Dict[str, match.Match]):
     """Returns a grouping span for the containing simple AST node.
 
     Substitutions that lie within a simple statement or expression are
@@ -773,7 +773,7 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
     """
 
     m = match_dict[ROOT_LABEL]
-    if not isinstance(m, matcher.LexicalASTMatch):
+    if not isinstance(m, _matcher.LexicalASTMatch):
       return None
 
     simple_node = parsed.nav.get_simple_node(m.matched)
@@ -813,7 +813,7 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
 
   def find_iter_parsed(
       self,
-      parsed: matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
+      parsed: _matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
     # All node IDs that have been removed.
     removed_nodes = set([])
     # All node IDs that have been removed AND whose previous siblings have all
@@ -853,7 +853,7 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
 
   def _sanitize_removed_stmt(
       self,
-      parsed: matcher.PythonParsedFile,
+      parsed: _matcher.PythonParsedFile,
       match_dict: Mapping[str, match.Match],
       sub: substitution.Substitution,
       removed_nodes: MutableSet[int],
@@ -885,7 +885,7 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
     replacements = sub.replacements.copy()
     for metavar, replacement in replacements.items():
       match_ = match_dict[metavar]
-      if not isinstance(match_, matcher.LexicalASTMatch):
+      if not isinstance(match_, _matcher.LexicalASTMatch):
         continue
       ast_match = match_.matched
       # TODO: Should a comment or another non-statement count?

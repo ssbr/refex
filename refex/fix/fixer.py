@@ -73,10 +73,10 @@ class CombiningPythonFixer(search.FileRegexFilteredSearcher,
         )
 
   # Override _matcher definition, as it's now computed based on fixers.
-  _matcher = attr.ib(init=False)
+  matcher = attr.ib(init=False)
 
-  @_matcher.default
-  def _matcher_default(self):
+  @matcher.default
+  def matcher_default(self):
     return base_matchers.AnyOf(
         *(fixer.matcher_with_meta for fixer in self.fixers))
 
