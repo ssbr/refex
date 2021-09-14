@@ -76,16 +76,18 @@ import functools
 import itertools
 import operator
 import sre_parse
-from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, Set, Text, Tuple
+from typing import (Any, Dict, Iterable, Iterator, Mapping, Optional, Set, Text,
+                    Tuple)
 
 import attr
 import cached_property
 import colorama
+import six
+
 from refex import future_string
 from refex import match as _match
 from refex import parsed_file
 from refex import substitution
-import six
 
 _DEFAULT_STYLES = (
     colorama.Style.BRIGHT + colorama.Fore.YELLOW,

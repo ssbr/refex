@@ -93,11 +93,12 @@ import weakref
 
 import attr
 import cached_property
+import six
+
 from refex.python import matcher
 from refex.python import python_pattern
 from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
-import six
 
 
 def _remap_macro_variables(pattern):

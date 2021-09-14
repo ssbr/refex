@@ -20,13 +20,14 @@ from __future__ import unicode_literals
 
 from absl.testing import absltest
 from absl.testing import parameterized
+import six
+
 from refex import formatting
 from refex import match
 from refex.python import matcher
 from refex.python import syntactic_template
 from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
-import six
 
 
 class LexicalTemplateTest(parameterized.TestCase):

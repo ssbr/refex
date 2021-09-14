@@ -80,6 +80,7 @@ from __future__ import print_function
 import abc
 import ast
 import collections
+import contextlib
 import copy
 import enum
 import functools
@@ -92,12 +93,12 @@ from absl import logging
 import asttokens
 import attr
 import cached_property
-import contextlib
+import six
+from six.moves import reprlib
+
 from refex import formatting
 from refex import match
 from refex import parsed_file
-import six
-from six.moves import reprlib
 
 _match = match  # when `match` is shadowed, e.g. class attributes.
 

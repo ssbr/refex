@@ -23,10 +23,11 @@ import unittest
 
 from absl.testing import absltest
 from absl.testing import parameterized
+import six
+
 from refex import search
 from refex.fix import fixer
 from refex.fix.fixers import idiom_fixers
-import six
 
 
 def _rewrite(fixer_, code):

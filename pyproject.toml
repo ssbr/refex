@@ -43,13 +43,6 @@ docs = ["m2r", "sphinx"]
 
 [tool.isort]
 profile = "google"
-# Upstream version within Google actually uses contextlib2 and mock for Python 2
-# compatibility, and this is transformed away by copybara.
-# Adding contextlib2 to the stdlib makes the sorting correct in the canonical
-# github version even when run on the upstream version pre-copybara. Adding
-# mock... doesn't help as much (sorts as "mock", not "unittest").
-# These can both go away starting in 2021.
-extra_standard_library = ["contextlib2", "mock"]
 
 # https://tox.readthedocs.io/
 [tool.tox]

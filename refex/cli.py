@@ -30,6 +30,7 @@ from __future__ import print_function
 import argparse
 import atexit
 import collections
+import contextlib
 import cProfile as profile
 import errno
 import io
@@ -45,13 +46,13 @@ from typing import Dict, Iterable, List, Optional, Text, Tuple, Union
 from absl import app
 import attr
 import colorama
-import contextlib
 import pkg_resources
+import six
+
 from refex import formatting
 from refex import search
 from refex.fix import find_fixer
 from refex.python import syntactic_template
-import six
 
 _IGNORABLE_ERRNO = frozenset([
     errno.ENOENT,  # file was removed after we went looking

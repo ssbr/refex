@@ -50,9 +50,10 @@ import functools
 import sys
 
 import attr
+import six
+
 from refex.python import matcher
 from refex.python.matchers import base_matchers
-import six
 
 _HAS_DYNAMIC_ATTRIBUTES = True
 

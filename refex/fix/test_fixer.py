@@ -17,10 +17,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals  # for convenience.
+
+from unittest import mock
+
 from absl.testing import absltest
 from absl.testing import parameterized
 import attr
-from unittest import mock
+
 from refex import formatting
 from refex import future_string
 from refex import search

@@ -14,6 +14,7 @@
 """Tests for refex.examples.example_custom_matcher."""
 
 from absl.testing import absltest
+
 from refex import search
 from refex.examples import example_custom_matcher
 from refex.python import syntactic_template

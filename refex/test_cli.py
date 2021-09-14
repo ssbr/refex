@@ -18,19 +18,20 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import contextlib
 import json
 import os
 import re
 import sys
 import textwrap
 import unittest
+from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import contextlib
-from unittest import mock
-from refex import cli
 import six
+
+from refex import cli
 
 
 class ParseArgsLeftoversTest(absltest.TestCase):
