@@ -86,7 +86,7 @@ import enum
 import functools
 import sys
 import tokenize
-from typing import Any, Dict, Iterator, Optional, Text
+from typing import Any, Dict, Iterator, Optional, Text, Union
 import weakref
 
 from absl import logging
@@ -147,8 +147,7 @@ def register_enum(cls):
   return cls
 
 
-def register_constant(name, constant):
-  # type: (Text, Any) -> None
+def register_constant(name: str, constant: Any):
   """Registers a constant for use in evaluate.py."""
   if name in registered_constants:
     raise AssertionError('Two conflicting constants: %r, %r' % constant,
@@ -294,10 +293,15 @@ class LexicalMatch(match.Match):
 class LexicalASTMatch(match.ObjectMatch, LexicalMatch):
   """AST match with adjustable start/end tokens."""
   # Override for better type checking.
-  matched = None  # type: ast.AST
+  matched: ast.AST = None
 
 
-def create_match(parsed, matched):
+# TODO: describe create_match with overloads for more precise type checking.
+
+
+def create_match(
+    parsed: PythonParsedFile, matched: Any
+) -> Union[LexicalASTMatch, match.StringMatch, match.ObjectMatch]:
   """Construct the most precise match for an object.
 
   This does a type check on `matched` to see if it has lexical information, but
@@ -323,7 +327,7 @@ def create_match(parsed, matched):
     return match.ObjectMatch(matched)
 
 
-def _is_lexical_match(matched):
+def _is_lexical_match(matched: Any) -> bool:
   """Returns whether the match can be a lexical one.
 
   Its not well documented what ast objects return token information and
@@ -336,7 +340,6 @@ def _is_lexical_match(matched):
   Returns:
     whether it can be a LexicalASTMatch or not.
   """
-  # type: (Any) -> bool
   first_token = getattr(matched, 'first_token', None)
   last_token = getattr(matched, 'last_token', None)
   if not (first_token and last_token):
@@ -861,7 +864,7 @@ class ImplicitEquals(Matcher):
   implicitly).
   """
 
-  _value = attr.ib()  # type: Any
+  _value = attr.ib(type=Any)
 
   def _match(self, context, candidate):
     if candidate == self._value:

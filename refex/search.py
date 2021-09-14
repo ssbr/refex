@@ -362,7 +362,7 @@ class WrappedSearcher(AbstractSearcher):
   Attributes:
     searcher: the wrapped searcher.
   """
-  searcher = attr.ib()
+  searcher = attr.ib(type=AbstractSearcher)
 
   def parse(self, *args, **kwargs):
     return self.searcher.parse(*args, **kwargs)
@@ -729,7 +729,7 @@ class BasePythonSearcher(AbstractSearcher):
 class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
   """Searcher class using :mod``refex.python.matchers``."""
 
-  matcher = attr.ib()
+  matcher = attr.ib(type=_matcher.Matcher)
 
   @classmethod
   def from_matcher(cls, matcher, templates: Dict[str, formatting.Template]):

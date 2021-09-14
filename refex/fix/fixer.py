@@ -109,7 +109,7 @@ class SimplePythonFixer(PythonFixer):
   _message = attr.ib(default=None, type=Optional[str])
   _url = attr.ib(default=None, type=Optional[str])
   _category = attr.ib(default=None, type=str)
-  _example_fragment = attr.ib(default=None, type=Optional[str])  # type:
+  _example_fragment = attr.ib(default=None, type=Optional[str])
   _example_replacement = attr.ib(default=None, type=Optional[str])
   _significant = attr.ib(default=True, type=bool)
 

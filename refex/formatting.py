@@ -80,7 +80,7 @@ import subprocess
 import sys
 import tempfile
 import typing
-from typing import Any, Iterable, Mapping, Optional, Set, Text, Tuple
+from typing import Any, Dict, Iterable, Iterator, Mapping, Optional, Set, Text, Tuple
 
 import attr
 import cached_property
@@ -103,7 +103,7 @@ _DEFAULT_STYLES = (
 
 
 # TODO: Move this onto the Substitution as a "context" span.
-def line_expanded_span(s, start, end):
+def line_expanded_span(s: str, start: int, end: int) -> Tuple[int, int]:
   """Expands a slice of a string to the edges of the lines it overlaps.
 
   The start is moved left until it takes place after the preceding newline,
@@ -305,10 +305,12 @@ class Renderer(object):
         :meth:`render()`.
     color: Whether to style and colorize human-readable output or not.
   """
-  _match_format = attr.ib(default='{head}{match}{tail}')
-  color = attr.ib(default=True)
-  _label_to_style = attr.ib(factory={frozenset(): ''}.copy, init=False)
-  _styles = attr.ib(default=itertools.cycle(_DEFAULT_STYLES), init=False)
+  _match_format = attr.ib(default='{head}{match}{tail}', type=str)
+  color = attr.ib(default=True, type=bool)
+  _label_to_style = attr.ib(
+      factory={frozenset(): ''}.copy, init=False, type=Dict[Set[str], str])
+  _styles = attr.ib(
+      default=itertools.cycle(_DEFAULT_STYLES), init=False, type=Iterator[str])
 
   def render(
       self,
@@ -533,7 +535,7 @@ class LiteralTemplate(Template):
   """A no-op template which does no substitution at all."""
 
   #: The source template.
-  template = attr.ib(type=Text)
+  template = attr.ib(type=str)
   variables = frozenset()
 
   def substitute_match(self, parsed, match, matches):
@@ -549,9 +551,9 @@ class ShTemplate(Template):
   """
 
   #: The source template.
-  template = attr.ib(type=Text)
+  template = attr.ib(type=str)
 
-  _template = attr.ib(repr=False, init=False)
+  _template = attr.ib(repr=False, init=False, type=future_string.Template)
 
   @_template.default
   def _template_default(self):
