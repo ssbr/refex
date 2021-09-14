@@ -420,7 +420,7 @@ class CombinedSearcher(AbstractSearcher):
   # could walk once and only run the searchers that could possibly match
   # at a given point using an O(1) type lookup -- which would generally cut
   # down the number of results.
-  searchers = attr.ib(type=Tuple[AbstractSearcher, ...], converter=tuple,)
+  searchers = attr.ib(type=Sequence[AbstractSearcher], converter=tuple)
 
   def parse(self, data: Text, filename: str):
     """Parses using each sub-searcher, returning the most specific parsed file.
