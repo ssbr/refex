@@ -396,6 +396,57 @@ class UnlessTest(absltest.TestCase):
     self.assertEqual(unless_bind.bind_variables, set())
 
 
+class OnceTest(matcher_test_util.MatcherTestCase):
+
+  def test_nomatch(self):
+    source = 'a\nb\n'
+    m = base_matchers.Once(base_matchers.Unless(base_matchers.Anything()))
+    self.assertEqual(
+        self.get_all_match_strings(m, source),
+        [],
+    )
+
+  def test_cached(self):
+    source = 'b\na\nb\n'
+    m = base_matchers.AllOf(
+        base_matchers.MatchesRegex(r'a|b'),
+        base_matchers.Once(base_matchers.MatchesRegex(r'a')),
+    )
+    self.assertEqual(
+        self.get_all_match_strings(m, source),
+        ['a', 'b'],
+    )
+
+  def test_cached_same_match(self):
+    """Once caches results even within the same match attempt.
+
+    This isn't a very realistic test case, but just in case the matcher gets
+    used in unexpectedly complex ways, it should be sound.
+    """
+    once_equals_one = base_matchers.Once(base_matchers.Equals(1))
+    m = base_matchers.ItemsAre([once_equals_one] * 3)
+
+    # Fails if it sees non-one entries:
+    self.assertIsNone(m.match(_FAKE_CONTEXT.new(), [2, 2, 3]))
+    # But if it sees a 1 first, then all subsequent calls will also match, even
+    # if they are not one, because the result is cached.
+    self.assertIsNotNone(m.match(_FAKE_CONTEXT.new(), [1, 2, 3]))
+
+  def test_bindings(self):
+    m = base_matchers.Once(base_matchers.Bind('foo'))
+    self.assertEqual(
+        m.match(_FAKE_CONTEXT.new(), 1),
+        matcher.MatchInfo(
+            match.ObjectMatch(1),
+            {'foo': matcher.BoundValue(match.ObjectMatch(1))}))
+    self.assertEqual(m.bind_variables, {'foo'})
+
+  def test_type_filter(self):
+    # Since the result is cached, technically, the type filter should be None.
+    m = base_matchers.Once(base_matchers.TypeIs(int))
+    self.assertIsNone(m.type_filter)
+
+
 class EqualsTest(parameterized.TestCase):
 
   @parameterized.parameters(

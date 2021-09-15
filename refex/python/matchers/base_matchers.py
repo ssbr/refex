@@ -16,8 +16,8 @@
 :mod:`~refex.python.matchers.base_matchers`
 -------------------------------------------
 
-Logical Matchers
-~~~~~~~~~~~~~~~~
+Control Flow Matchers
+~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: Anything
 
@@ -26,6 +26,8 @@ Logical Matchers
 .. autoclass:: AllOf
 
 .. autoclass:: AnyOf
+
+.. autoclass:: Once
 
 Examples
 ........
@@ -225,6 +227,29 @@ class Unless(matcher.Matcher):
       return None
 
   # TODO: Maybe, someday, do stratified datalog with negation.
+  type_filter = None
+
+
+@matcher.safe_to_eval
+@attr.s(frozen=True, eq=False)
+class Once(matcher.Matcher):
+  """Runs the submatcher at most once successfully.
+
+  Matches if the submatcher has ever matched, including in this run. Fails if
+  the matcher has not ever matched.
+  """
+  _submatcher = matcher.submatcher_attrib()
+
+  @matcher.accumulating_matcher
+  def _match(self, context, candidate):
+    if context.has_run(self):
+      return
+
+    m = self._submatcher.match(context, candidate)
+    if m is not None:
+      context.set_has_run(self)
+    yield m
+
   type_filter = None
 
 

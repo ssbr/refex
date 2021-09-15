@@ -86,7 +86,7 @@ import enum
 import functools
 import sys
 import tokenize
-from typing import Any, Dict, Iterator, Optional, Text, Union
+from typing import Any, Dict, Iterator, Optional, Set, Text, Union
 import weakref
 
 from absl import logging
@@ -242,14 +242,49 @@ class PythonParsedFile(parsed_file.ParsedFile):
 
 @attr.s(frozen=True, eq=False)
 class MatchContext(object):
-  """Per-match context.
+  """Per-match and per-file context.
 
-  Exactly one MatchContext exists per top-level invocation of a matcher,
-  so this can be used to keep state across a match that shouldn't transfer to
-  subsequent match attempts. (For example, a matcher that must match exactly the
-  same string across all invocations inside a match, or similar.)
+  One prototype ``MatchContext`` exists per file, containing shared data across
+  all successful runs. A separate derived instance is made per top-level
+  invocation of a matcher, which can be used to keep state across a match that
+  shouldn't transfer to subsequent match attempts. (For example, a matcher that
+  must match exactly the same string across all invocations inside a match, or
+  similar.)
   """
   parsed_file = attr.ib(type=PythonParsedFile)
+
+  _has_successful_run = attr.ib(type=Set[Any], factory=set)
+  _has_match_run = attr.ib(type=Set[Any], factory=set)
+
+  def new(self) -> 'MatchContext':
+    """Returns a new context for the same file, sharing ``has_run`` state."""
+    return attr.evolve(self, has_match_run=set())
+
+  def has_run(self, key: Any) -> bool:
+    """Returns if ``set_has_run`` was called in this or a prior successful match.
+
+    Check ``has_run(key)`` before doing work that should be done once-per-file,
+    and then call ``set_has_run(key)`` if that work completed successfully.
+
+    For example, this can be used to add an import only on the first added use
+    of that import.
+
+    Args:
+      key: Any unique object, but should be the matcher.
+
+    Returns:
+      ``True`` if ``set_has_run(key)`` was executed either in an earlier
+      successful match attempt, or in the current match attempt.
+      ``False`` otherwise.
+    """
+    return key in self._has_successful_run or key in self._has_match_run
+
+  def set_has_run(self, key: Any):
+    self._has_match_run.add(key)
+
+  def update_success(self, successful_context: 'MatchContext'):
+    """Update the match context based on a successful match."""
+    self._has_successful_run.update(successful_context._has_match_run)
 
 
 @attr.s(frozen=True)
@@ -1227,18 +1262,21 @@ def find_iter(matcher: Matcher,
   Yields:
     The successful results of ``matcher.match()`` (:class:`MatchInfo`).
   """
+  context = MatchContext(parsed)
   stack = [parsed.tree]
   while stack:
     next_node = stack.pop()
+    new_context = context.new()
     try:
       if matcher.type_filter is None or type(next_node) in matcher.type_filter:
-        match_info = matcher.match(MatchContext(parsed), next_node)
+        match_info = matcher.match(new_context, next_node)
       else:
         match_info = None
     except MatchError as e:
       print('Matcher failed: {}'.format(e), file=sys.stderr)
       continue
     if match_info is not None:
+      context.update_success(new_context)
       yield match_info
       # Don't recurse inside: matches should be non-overlapping.
       continue
