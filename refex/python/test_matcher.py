@@ -25,6 +25,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import attr
 
+from refex import formatting
 from refex import match
 from refex import parsed_file
 from refex.python import matcher
@@ -392,6 +393,92 @@ class CreateMatchTest(absltest.TestCase):
     self.assertEqual(
         match.ObjectMatch(obj),
         matcher.create_match(_FAKE_CONTEXT.parsed_file, obj))
+
+
+class MatchInfoTest(absltest.TestCase):
+
+  def test_from_diff_empty(self):
+    self.assertEqual(
+        matcher.MatchInfo.from_diff('metavar', 'a\nb\nc\n', 'a\nb\nc\n'),
+        matcher.MatchInfo(match.Match()),
+    )
+
+  def test_from_diff_add(self):
+    self.assertEqual(
+        matcher.MatchInfo.from_diff('metavar', 'a\n', 'a\nb\n'),
+        matcher.MatchInfo(
+            match.Match(),
+            bindings={
+                'metavar.0':
+                    matcher.BoundValue(
+                        match.SpanMatch(
+                            string='',
+                            span=(2, 2),
+                        ))
+            },
+            replacements={'metavar.0': formatting.LiteralTemplate('b\n')},
+        ),
+    )
+
+  def test_from_diff_remove(self):
+    self.assertEqual(
+        matcher.MatchInfo.from_diff('metavar', 'a\nb\n', 'a\n'),
+        matcher.MatchInfo(
+            match.Match(),
+            bindings={
+                'metavar.0':
+                    matcher.BoundValue(
+                        match.SpanMatch(
+                            string='b\n',
+                            span=(2, 4),
+                        ))
+            },
+            replacements={'metavar.0': formatting.LiteralTemplate('')},
+        ),
+    )
+
+  def test_from_diff_change(self):
+    self.assertEqual(
+        matcher.MatchInfo.from_diff('metavar', 'a\nb\n', 'a\nc\n'),
+        matcher.MatchInfo(
+            match.Match(),
+            bindings={
+                'metavar.0':
+                    matcher.BoundValue(
+                        match.SpanMatch(
+                            string='b\n',
+                            span=(2, 4),
+                        ))
+            },
+            replacements={'metavar.0': formatting.LiteralTemplate('c\n')},
+        ),
+    )
+
+  def test_from_diff_multiple(self):
+    self.assertEqual(
+        matcher.MatchInfo.from_diff('metavar', 'a\nb\nc\n', '1\nb\n3\n'),
+        matcher.MatchInfo(
+            match.Match(),
+            bindings={
+                'metavar.0':
+                    matcher.BoundValue(
+                        match.SpanMatch(
+                            string='a\n',
+                            span=(0, 2),
+                        )),
+                'metavar.1':
+                    matcher.BoundValue(
+                        match.SpanMatch(
+                            string='c\n',
+                            span=(4, 6),
+                        )),
+            },
+            replacements={
+                'metavar.0': formatting.LiteralTemplate('1\n'),
+                'metavar.1': formatting.LiteralTemplate('3\n'),
+            },
+        ),
+    )
 
 
 if __name__ == '__main__':

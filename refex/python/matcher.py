@@ -82,8 +82,10 @@ import ast
 import collections
 import contextlib
 import copy
+import difflib
 import enum
 import functools
+import itertools
 import sys
 import tokenize
 from typing import Any, Dict, Iterator, Optional, Set, Text, Union
@@ -702,6 +704,65 @@ class MatchInfo(object):
   # TODO: also add a top-level `replacement` variable, replacing the magic root.
   bindings = attr.ib(factory=dict, type=Dict[str, BoundValue])
   replacements = attr.ib(factory=dict, type=Dict[str, formatting.Template])
+
+  @classmethod
+  def from_diff(cls,
+                metavariable_prefix: str,
+                before: str,
+                after: str,
+                match=_match.Match(),
+) -> 'MatchInfo':
+    """Returns a minimized ``MatchInfo`` for the diff of before/after.
+
+    Args:
+      metavariable_prefix: the prefix for the named bindings/replacements.
+      before: the entire file, before.
+      after: the entire file, after.
+      match: The match for the MatchInfo.
+
+    Returns:
+      A minimized ``MatchInfo`` for that diff.
+    """
+    diffs = difflib.Differ().compare(
+        before.splitlines(True),
+        after.splitlines(True),
+    )
+    # change the diffs to always end with an "unchanged" line, triggering
+    # an append to `replacements`.
+    diffs = itertools.chain(diffs, ['  '])
+    start_offset = 0
+    end_offset = 0
+    replacement = []
+    replacements = []
+    for line in diffs:
+      prefix = line[:2]
+      line = line[2:]
+      if prefix == '  ':
+        if replacement or start_offset != end_offset:
+          replacements.append((start_offset, end_offset, replacement))
+          replacement = []
+        end_offset += len(line)
+        start_offset = end_offset
+      elif prefix == '+ ':
+        replacement.append(line)
+      elif prefix == '- ':
+        end_offset += len(line)
+      elif prefix == '? ':
+        pass
+      else:
+        raise AssertionError(f'Unknown diff prefix: {prefix!r}')
+
+    assert not replacement
+
+    match_bindings = {}
+    match_replacements = {}
+    for i, (start, end, added_strings) in enumerate(replacements):
+      metavar = f'{metavariable_prefix}.{i}'
+      match_bindings[metavar] = BoundValue(
+          _match.SpanMatch.from_text(before, (start, end)))
+      match_replacements[metavar] = formatting.LiteralTemplate(
+          ''.join(added_strings))
+    return cls(match, match_bindings, match_replacements)
 
 
 def _stringify_candidate(context, candidate):
