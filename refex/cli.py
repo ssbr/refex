@@ -383,11 +383,11 @@ def run_cli(argv,
 
     def main_for_absl(argv):
       options = _parse_options(argv[1:], parser)
-      runner = get_runner(parser, options)
-      files = get_files(runner, options)
 
       def _run():
         """A wrapper function for profiler.runcall."""
+        runner = get_runner(parser, options)
+        files = get_files(runner, options)
         run(runner, files, bug_report_url, version)
 
       if options.profile_to:
