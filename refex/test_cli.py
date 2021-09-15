@@ -183,6 +183,23 @@ class MainTest(MainTestBase):
       output = self.main(['--mode=re', 'xyzzy'] + extra_flags + [f.full_path])
       self.assertEqual(output, 'xx xyzzy xx\n')
 
+  def test_grep_recursive(self):
+    d = self.create_tempdir()
+    f1 = d.create_file(content='f1: xyzzy')
+    f2 = d.create_file(content='f2: xyzzy')
+    f_notmatched = d.create_file(content='not matched')
+    f3 = self.create_tempfile(content='f3: xyzzy')
+
+    for recursive_flag in ['-R', '--recursive']:
+      with self.subTest(flag=recursive_flag):
+        output = self.main([
+            '--mode=re', 'xyzzy', '--no-filename', recursive_flag, d.full_path,
+            f3.full_path
+        ])
+        # directory listings can be in any order.
+        output = sorted(output.splitlines())
+        self.assertEqual(output, ['f1: xyzzy', 'f2: xyzzy', 'f3: xyzzy'])
+
   def test_grep_multi(self):
     f = self.create_tempfile(content='a\nb\n')
     self.assertEqual(

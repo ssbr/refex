@@ -881,10 +881,21 @@ def runner_from_options(parser, options) -> RefexRunner:
   )
 
 
-def files_from_options(runner, options) -> List[Tuple[str, str]]:
+def files_from_options(
+    runner: RefexRunner,
+    options,
+) -> Iterable[Tuple[str, str]]:
   """Returns the list of files specified by the command line options."""
-  del runner
-  return list(zip(options.files, options.files))
+  del runner  # unused
+  for path in options.files:
+    if not options.recursive or not os.path.isdir(path):
+      yield (path, path)
+      continue
+
+    for path_to, unused_dirnames, files in os.walk(path):
+      for fname in files:
+        recursive_path = os.path.join(path_to, fname)
+        yield (recursive_path, recursive_path)
 
 
 def main(argv=None, bug_report_url=_BUG_REPORT_URL, version=None):
