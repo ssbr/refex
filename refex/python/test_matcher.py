@@ -506,5 +506,21 @@ class LexicalMatchTest(absltest.TestCase):
       m = attr.evolve(m, include_first=False, include_last=False)
       self.assertEqual(m.string, 'hello, world')
 
+
+class FixedInitTest(absltest.TestCase):
+
+  def test_error_message(self):
+    try:
+      eq = base_matchers.Equals(1, 2, 3)
+    except TypeError as e:
+      message = str(e)
+    else:
+      self.fail(f"Equals() didn't throw exception: {eq!r}")
+
+    self.assertIn('Equals', message)
+    self.assertNotIn('__init__', message)
+    # in case Python ever wises up and tries saying `Equals.__init__`
+    self.assertNotIn('Equals.Equals', message)
+
 if __name__ == '__main__':
   absltest.main()

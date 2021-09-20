@@ -123,8 +123,53 @@ class MatchError(Exception):
 _registered_eval_matchers = set()
 
 
+def _fix_init(cls):
+  """Converts error messages about __init__ to instead say cls.__name__."""
+
+  # One option:
+
+  # init = cls.__init__
+  # if not isinstance(init, types.FunctionType):
+  #   return
+  #
+  # code = init.__code__
+  # if sys.version_info >= (3, 8):
+  #   code = code.replace(co_name=cls.__name__)
+  # elif sys.version_info >= (3, 6):
+  #   code = types.CodeType(
+  #       code.co_argcount,
+  #       # code.co_posonlyargcount,  3.8-only, but we have replace() then.
+  #       <...>
+  #       # NOT: code.co_name,
+  #       cls.__name__,
+  #       <...>
+  #   )
+  #
+  # # Unlike code objects, function objects are mutable.
+  # # So we can just copy one and modify the interesting properties.
+  # init = copy.copy(init)
+  # init.__code__ = code
+  # cls.__init__ = init
+  # return cls
+
+  # However, that seems like the sort of thing we look back on later and think,
+  # "Ah yes, that's where it all started going wrong".
+  # Instead, let's do something stupid but less foolish.
+  old_init = cls.__init__
+  def new_init(*args, **kwargs):
+    try:
+      old_init(*args, **kwargs)
+    except TypeError as e:
+      if len(e.args) == 1 and isinstance(e.args[0], str):
+        e.args = (e.args[0].replace('__init__', cls.__name__),)
+      raise
+  cls.__init__ = new_init
+  return cls
+
+
 def safe_to_eval(cls):
-  """Decorates a class to make it available in from evaluate.py."""
+  """Makes a class available from evaluate.py, and cleans its errors for users."""
+  cls = _fix_init(cls)
   _registered_eval_matchers.add(cls)
   return cls
 
