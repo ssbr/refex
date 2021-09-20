@@ -322,7 +322,7 @@ class ImmutableDefaultDictTest(absltest.TestCase):
             fixer.ImmutableDefaultDict(lambda k: k)), 'a == b')
 
   def test_len(self):
-    self.assertLen(fixer.ImmutableDefaultDict(lambda _: 'a'), 0)
+    self.assertEmpty(fixer.ImmutableDefaultDict(lambda _: 'a'))
 
 
 class DefaultFixerTest(absltest.TestCase):

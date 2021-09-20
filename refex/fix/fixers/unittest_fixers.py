@@ -56,7 +56,7 @@ def assert_alias_fixer(old_expr, new_expr):
   )
 
 
-def assert_message_fixer(old_expr, new_expr, method):
+def assert_message_fixer(old_expr, new_expr, method, is_absl=False):
   """Fixer for assertTrue()/assertFalse()/etc.
 
   related error fixes.
@@ -67,21 +67,26 @@ def assert_message_fixer(old_expr, new_expr, method):
   Args:
     old_expr: a ExprPattern string for the expr to match
     new_expr: a template string for the replacement
-    method: the method to link to in the unittest docs.
+    method: the method to link to in the docs.
+    is_absl: Whether this is an absl method with absl docs.
 
   Returns:
     A fixer that replaces old_expr with new_expr.
   """
+  if is_absl:
+    # absl doesn't have docs per se.
+    url = f'https://github.com/abseil/abseil-py/search?q=%22def+{method}%22'
+  else:
+    url = f'https://docs.python.org/3/library/unittest.html#unittest.TestCase.{method}'
   dotdotdot = fixer.ImmutableDefaultDict(lambda _: '...')
   return fixer.SimplePythonFixer(
-      message=('%s will give more detailed error information than %s.' %
-               (string.Template(new_expr).substitute(dotdotdot),
-                string.Template(old_expr).substitute(dotdotdot))),
+      message=(
+          '%s is a more specific assertion, and may give more detailed error information than %s.'
+          % (string.Template(new_expr).substitute(dotdotdot),
+             string.Template(old_expr).substitute(dotdotdot))),
       matcher=syntax_matchers.ExprPattern(old_expr),
       replacement=syntactic_template.PythonExprTemplate(new_expr),
-      url=(
-          'https://docs.python.org/3/library/unittest.html#unittest.TestCase.%s'
-          % method),
+      url=url,
       category='pylint.g-generic-assert',
   )
 
@@ -168,7 +173,15 @@ SIMPLE_PYTHON_FIXERS = [
                          'self.assertIsInstance($lhs, $rhs)',
                          'assertIsInstance'),
 
-    # TODO: assertLen and other absltest methods.
+    # TODO: suggest assertLen, and other absltest methods.
     # Those are slightly more complicated because we must check whether or not
     # the test even _is_ an absltest.
+
+    # However, if we're already using one abslTest method, we can suggest
+    # another:
+    assert_message_fixer(
+        'self.assertLen($x, 0)',
+        'self.assertEmpty($x)',
+        'assertEmpty',
+        is_absl=True),
 ]
