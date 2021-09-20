@@ -32,12 +32,16 @@ from refex.python import syntactic_template
 from refex.python.matchers import syntax_matchers
 
 
-def assert_alias_fixer(old_expr, new_expr):
+def assert_alias_fixer(
+    old_expr,
+    new_expr,
+    url='https://docs.python.org/3/library/unittest.html#deprecated-aliases'):
   """Fixer for deprecated unittest aliases.
 
   Args:
     old_expr: A string for an ExprPattern matching the target expr.
     new_expr: A string for a PythonExprTemplate to replace it with.
+    url: The URL documenting the deprecation.
 
   Returns:
     A fixer that replaces old_expr with new_expr.
@@ -50,7 +54,7 @@ def assert_alias_fixer(old_expr, new_expr):
                    new=string.Template(new_expr).substitute(dotdotdot))),
       matcher=syntax_matchers.ExprPattern(old_expr),
       replacement=syntactic_template.PythonExprTemplate(new_expr),
-      url='https://docs.python.org/3/library/unittest.html#deprecated-aliases',
+      url=url,
       significant=False,
       category='pylint.g-deprecated-assert',
   )
@@ -109,6 +113,12 @@ SIMPLE_PYTHON_FIXERS = [
     assert_alias_fixer('self.assertRegexpMatches', 'self.assertRegex'),
     assert_alias_fixer('self.assertNotRegexpMatches', 'self.assertNotRegex'),
     assert_alias_fixer('self.assertRaisesRegexp', 'self.assertRaisesRegex'),
+    # Defined by eg. absltest as a Python 2 compatibility shim.
+    assert_alias_fixer(
+        'self.assertItemsEqual',
+        'self.assertCountEqual',
+        url='https://docs.python.org/2/library/unittest.html#unittest.TestCase.assertItemsEqual'
+    ),
 
     # Assertion message fixers:
     # assertFalse(...) is excluded for now because will change which method is
