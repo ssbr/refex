@@ -11,3 +11,5 @@
 
 .. automodule:: refex.python.matchers.ast_matchers
   :members:
+
+.. automodule:: refex.python.matchers.extern_matchers
