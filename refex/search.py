@@ -111,6 +111,7 @@ from refex import parsed_file
 from refex import substitution
 from refex.python import evaluate
 from refex.python import matcher as _matcher
+from refex.python import syntactic_template
 from refex.python.matchers import base_matchers
 from refex.python.matchers import syntax_matchers
 
@@ -802,6 +803,9 @@ class PyExprRewritingSearcher(BasePythonRewritingSearcher):
         syntax_matchers.ExprPattern(pattern), templates=templates)
 
 
+_PASS_TEMPLATE = syntactic_template.PythonStmtTemplate('pass')
+
+
 class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
   """Parses the pattern as a ``--mode=py.stmt`` template."""
 
@@ -811,54 +815,36 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
     return cls.from_matcher(
         syntax_matchers.StmtPattern(pattern), templates=templates)
 
-  def find_iter_parsed(
+  def find_dicts_parsed(
       self,
-      parsed: _matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
+      parsed: _matcher.PythonParsedFile,
+  ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
+      MatchKey, formatting.Template]]]:
     # All node IDs that have been removed.
     removed_nodes = set([])
     # All node IDs that have been removed AND whose previous siblings have all
     # been removed, as well.
     removed_suite_prefix_nodes = set([])
 
-    # TODO: Deduplicate this impl from the base find_iter_parsed.
-    for match_dict, templates in self.find_dicts_parsed(parsed):
-      try:
-        replacements = formatting.rewrite_templates(parsed, match_dict,
-                                                    templates)
-      except formatting.RewriteError as e:
-        # TODO: Forward this up somehow.
-        print('Skipped rewrite:', e, file=sys.stderr)
-        continue
-
-      sub = substitution.Substitution(
-          matched_spans={
-              label: s.span
-              for label, s in match_dict.items()
-              if s.span not in (None, (-1, -1))
-          },
-          replacements=replacements,
-          primary_label=ROOT_LABEL,
-          message=replacements.pop(MESSAGE_LABEL, None),
-          url=replacements.pop(URL_LABEL, None),
-          category=replacements.pop(CATEGORY_LABEL, None),
-          significant=bool(replacements.pop(SIGNIFICANT_LABEL, '')),
-      )
-      yield self._sanitize_removed_stmt(
+    for match_dict, templates in super().find_dicts_parsed(parsed):
+      self._sanitize_removed_stmt(
           parsed,
           match_dict,
-          sub,
+          templates,
           removed_nodes,
           removed_suite_prefix_nodes,
       )
+      yield (match_dict, templates)
 
   def _sanitize_removed_stmt(
       self,
       parsed: _matcher.PythonParsedFile,
-      match_dict: Mapping[str, match.Match],
-      sub: substitution.Substitution,
+      match_dict: MutableMapping[str, match.Match],
+      templates: MutableMapping[MatchKey, formatting.Template],
       removed_nodes: MutableSet[int],
       removed_suite_prefix_nodes: MutableSet[int],
-  ) -> substitution.Substitution:
+  ) -> Tuple[Mapping[MatchKey, match.Match], Mapping[MatchKey,
+                                                     formatting.Template]]:
     """Ensure that a removed statement won't create syntax errors.
 
     Because of Python's whitespace-dependent structure, removing a statement can
@@ -869,27 +855,22 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
     Args:
       parsed: The file being parsed.
       match_dict: The match dict for this match.
-      sub: The pre-sanitization Substitution.
+      templates: The replacement templates.
       removed_nodes: IDs of AST statement nodes that have already be removed by
         previous iterations.
       removed_suite_prefix_nodes: IDs of AST statement nodes whose entire suites
         have been removed up to this point.
 
     Returns:
-      A sanitized version of the Substitution.
+      A sanitized version of the matched spans/replacements.
     """
-    if sub.replacements is None:
-      return sub
-
-    matched_spans = sub.matched_spans.copy()
-    replacements = sub.replacements.copy()
-    for metavar, replacement in replacements.items():
+    for metavar, replacement in templates.items():
       match_ = match_dict[metavar]
       if not isinstance(match_, _matcher.LexicalASTMatch):
         continue
       ast_match = match_.matched
       # TODO: Should a comment or another non-statement count?
-      if replacement or not isinstance(ast_match, ast.stmt):
+      if replacement.template or not isinstance(ast_match, ast.stmt):
         continue
       if not isinstance(parsed.nav.get_parent(ast_match), list):
         raise formatting.RewriteError(
@@ -907,14 +888,17 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
         # If this is the only statement in the suite, we only need to
         # add a placeholder to non-module suites to ensure valid syntax.
         if not at_module_level:
-          replacements[metavar] = u'pass'
+          templates[metavar] = _PASS_TEMPLATE
       elif next_ is not None:
         # If this statement occurs before the end of the suite, remove all
         # tokens until the next statement.
         if prev is None or id(prev) in removed_suite_prefix_nodes:
           removed_suite_prefix_nodes.add(id(ast_match))
-        [start, _] = matched_spans[metavar]
-        matched_spans[metavar] = (start, next_.first_token.startpos)
+        match_dict[metavar] = attr.evolve(
+            match_dict[metavar],
+            last_token=next_.first_token,
+            include_last=False,
+        )
       else:  # prev is not None
         # If this statement is at the end of the suite, either handle the
         # case where all statements have been removed from the suite OR
@@ -923,24 +907,23 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
         # this would create overlapping substitution spans.
         if id(prev) in removed_suite_prefix_nodes:
           if not at_module_level:
-            replacements[metavar] = u'pass'
+            templates[metavar] = _PASS_TEMPLATE
         elif id(prev) not in removed_nodes:
-          [_, end] = matched_spans[metavar]
-          matched_spans[metavar] = (prev.last_token.endpos, end)
+          match_dict[metavar] = attr.evolve(
+              match_dict[metavar],
+              first_token=prev.last_token,
+              include_first=False,
+          )
         # Remove trailing semicolons to fix the (rare) case where the last
         # statement in a module is removed but leaves its semicolon
         # resulting in a syntax error.
         next_token = parsed.ast_tokens.next_token(ast_match.last_token)
         if next_token.string == ';':
-          [start, _] = matched_spans[metavar]
-          matched_spans[metavar] = (start, next_token.endpos)
-
-    return attr.evolve(
-        sub,
-        matched_spans=matched_spans,
-        replacements=replacements,
-        primary_label=sub.primary_label,
-    )
+          match_dict[metavar] = attr.evolve(
+              match_dict[metavar],
+              last_token=next_token,
+              include_last=True,
+          )
 
 
 def rewrite_string(

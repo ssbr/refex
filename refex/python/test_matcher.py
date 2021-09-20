@@ -481,5 +481,30 @@ class MatchInfoTest(absltest.TestCase):
     )
 
 
+class LexicalMatchTest(absltest.TestCase):
+
+  def test_inclusivity(self):
+    parsed = matcher.parse_ast('[hello, world]')
+    node = parsed.tree.body[0]
+    m = matcher.create_match(parsed, node)
+
+    # Putting this all in one test case also verifies that attr.evolve()
+    # works as expected (e.g. doesn't interact poorly with cached_property)
+
+    with self.subTest(inclusive='both'):
+      self.assertEqual(m.string, '[hello, world]')
+
+    with self.subTest(inclusive='first'):
+      m = attr.evolve(m, include_first=True, include_last=False)
+      self.assertEqual(m.string, '[hello, world')
+
+    with self.subTest(inclusive='last'):
+      m = attr.evolve(m, include_first=False, include_last=True)
+      self.assertEqual(m.string, 'hello, world]')
+
+    with self.subTest(inclusive='neither'):
+      m = attr.evolve(m, include_first=False, include_last=False)
+      self.assertEqual(m.string, 'hello, world')
+
 if __name__ == '__main__':
   absltest.main()

@@ -295,11 +295,19 @@ class LexicalMatch(match.Match):
 
   .. attribute:: first_token
 
-     The first token in the matched lexical span.
+     The first token delimiting the matched lexical span.
 
   .. attribute:: last_token
 
-     The last token in the matched lexical span.
+     The last token delimiting the matched lexical span.
+
+  .. attribute:: include_first
+
+     Whether this starts before or after the first token.
+
+  .. attribute:: include_last
+
+     Whether this ends before or after the last token.
 
   .. attribute:: string
 
@@ -316,14 +324,26 @@ class LexicalMatch(match.Match):
   first_token = attr.ib(type=asttokens.util.Token)
   last_token = attr.ib(type=asttokens.util.Token)
 
+  # Useful for tweaking spans precisely.
+  include_first = attr.ib(type=bool, default=True)
+  include_last = attr.ib(type=bool, default=True)
+
   @cached_property.cached_property
   def string(self):
     start, end = self.span
     return self._text[start:end]
 
-  @property
+  @cached_property.cached_property
   def span(self):
-    return self.first_token.startpos, self.last_token.endpos
+    if self.include_first:
+      start = self.first_token.startpos
+    else:
+      start = self.first_token.endpos
+    if self.include_last:
+      end = self.last_token.endpos
+    else:
+      end = self.last_token.startpos
+    return start, end
 
 
 @attr.s(frozen=True)
