@@ -54,12 +54,3 @@ Refex uses two space indents because it originated in
 In fact, because indents are 2 spaces, and hanging indents are 4 spaces, it's
 much easier in Google-style Python than most code to distinguish between nested
 code inside of a function, vs e.g. function parameters that went on many lines.
-
-### Python 2 Half-Support
-
-A lot of code in Refex appears to support Python 2, but if you try it, Refex
-quite obviously does not work on Python 2 -- or rather, it doesn't without a
-patch to support Python 3 annotation syntax. That patch is available from
-[pytype](https://github.com/google/pytype/blob/master/2.7_patches/python_2_7_type_annotations.diff).
-
-Refex won't even support that much after Dec 2020.
