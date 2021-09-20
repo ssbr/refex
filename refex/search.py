@@ -726,6 +726,9 @@ class BasePythonSearcher(AbstractSearcher):
     return None
 
 
+_PASS_TEMPLATE = syntactic_template.PythonStmtTemplate('pass')
+
+
 @attr.s(frozen=True)
 class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
   """Searcher class using :mod``refex.python.matchers``."""
@@ -745,96 +748,26 @@ class BasePythonRewritingSearcher(BasePythonSearcher, BaseRewritingSearcher):
       self, parsed: _matcher.PythonParsedFile
   ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
       MatchKey, formatting.Template]]]:
+
+    # All node IDs that have been removed.
+    removed_nodes = set([])
+    # All node IDs in a suite that have been removed AND whose previous
+    # siblings have all been removed, as well.
+    removed_suite_prefix_nodes = set([])
+
     for result in _matcher.find_iter(self.matcher, parsed):
       matches = {
           bound_name: match.value
           for bound_name, match in result.bindings.items()
       }
-      yield matches, result.replacements
-
-  def key_span_for_dict(self, parsed: _matcher.PythonParsedFile,
-                        match_dict: Dict[str, match.Match]):
-    """Returns a grouping span for the containing simple AST node.
-
-    Substitutions that lie within a simple statement or expression are
-    grouped together and mapped to the span of the largest simple node they are
-    a part of. Every other substitution is mapped to None.
-
-    The idea here is that we want easy bite-sized chunks that are useful for
-    quickly checking parseability, and for re-running the fixers over that
-    chunk. Simple statements like import and return, as well as expressions
-    that are part of larger statements, are perfect for this.
-
-    Args:
-      parsed: The ParsedFile for the same file.
-      match_dict: The match dict.
-
-    Returns:
-      A grouping key, or None.
-    """
-
-    m = match_dict[ROOT_LABEL]
-    if not isinstance(m, _matcher.LexicalASTMatch):
-      return None
-
-    simple_node = parsed.nav.get_simple_node(m.matched)
-    if simple_node is None:
-      return None
-    return (simple_node.first_token.startpos, simple_node.last_token.endpos)
-
-
-class PyMatcherRewritingSearcher(BasePythonRewritingSearcher):
-  """Parses the pattern as a ``--mode=py`` matcher."""
-
-  @classmethod
-  def from_pattern(cls, pattern: str,  templates: Optional[Dict[str, formatting.Template]]) -> "PyMatcherRewritingSearcher":
-    """Creates a searcher from a ``--mode=py`` matcher."""
-    return cls.from_matcher(
-        evaluate.compile_matcher(pattern), templates=templates)
-
-
-class PyExprRewritingSearcher(BasePythonRewritingSearcher):
-  """Parses the pattern as a ``--mode=py.expr`` template."""
-
-  @classmethod
-  def from_pattern(cls, pattern: str,  templates: Optional[Dict[str, formatting.Template]]) -> "PyExprRewritingSearcher":
-    """Creates a searcher from a ``--mode=py.expr`` template."""
-    return cls.from_matcher(
-        syntax_matchers.ExprPattern(pattern), templates=templates)
-
-
-_PASS_TEMPLATE = syntactic_template.PythonStmtTemplate('pass')
-
-
-class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
-  """Parses the pattern as a ``--mode=py.stmt`` template."""
-
-  @classmethod
-  def from_pattern(cls, pattern: str,  templates: Optional[Dict[str, formatting.Template]]) -> "PyStmtRewritingSearcher":
-    """Creates a searcher from a ``--mode=py.stmt`` template."""
-    return cls.from_matcher(
-        syntax_matchers.StmtPattern(pattern), templates=templates)
-
-  def find_dicts_parsed(
-      self,
-      parsed: _matcher.PythonParsedFile,
-  ) -> Iterable[Tuple[Mapping[MatchKey, match.Match], Mapping[
-      MatchKey, formatting.Template]]]:
-    # All node IDs that have been removed.
-    removed_nodes = set([])
-    # All node IDs that have been removed AND whose previous siblings have all
-    # been removed, as well.
-    removed_suite_prefix_nodes = set([])
-
-    for match_dict, templates in super().find_dicts_parsed(parsed):
       self._sanitize_removed_stmt(
           parsed,
-          match_dict,
-          templates,
+          matches,
+          result.replacements,
           removed_nodes,
           removed_suite_prefix_nodes,
       )
-      yield (match_dict, templates)
+      yield (matches, result.replacements)
 
   def _sanitize_removed_stmt(
       self,
@@ -865,7 +798,7 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
       A sanitized version of the matched spans/replacements.
     """
     for metavar, replacement in templates.items():
-      match_ = match_dict[metavar]
+      match_ = match_dict.get(metavar)
       if not isinstance(match_, _matcher.LexicalASTMatch):
         continue
       ast_match = match_.matched
@@ -924,6 +857,66 @@ class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
               last_token=next_token,
               include_last=True,
           )
+
+  def key_span_for_dict(self, parsed: _matcher.PythonParsedFile,
+                        match_dict: Dict[str, match.Match]):
+    """Returns a grouping span for the containing simple AST node.
+
+    Substitutions that lie within a simple statement or expression are
+    grouped together and mapped to the span of the largest simple node they are
+    a part of. Every other substitution is mapped to None.
+
+    The idea here is that we want easy bite-sized chunks that are useful for
+    quickly checking parseability, and for re-running the fixers over that
+    chunk. Simple statements like import and return, as well as expressions
+    that are part of larger statements, are perfect for this.
+
+    Args:
+      parsed: The ParsedFile for the same file.
+      match_dict: The match dict.
+
+    Returns:
+      A grouping key, or None.
+    """
+
+    m = match_dict[ROOT_LABEL]
+    if not isinstance(m, _matcher.LexicalASTMatch):
+      return None
+
+    simple_node = parsed.nav.get_simple_node(m.matched)
+    if simple_node is None:
+      return None
+    return (simple_node.first_token.startpos, simple_node.last_token.endpos)
+
+
+class PyMatcherRewritingSearcher(BasePythonRewritingSearcher):
+  """Parses the pattern as a ``--mode=py`` matcher."""
+
+  @classmethod
+  def from_pattern(cls, pattern: str,  templates: Optional[Dict[str, formatting.Template]]) -> "PyMatcherRewritingSearcher":
+    """Creates a searcher from a ``--mode=py`` matcher."""
+    return cls.from_matcher(
+        evaluate.compile_matcher(pattern), templates=templates)
+
+
+class PyExprRewritingSearcher(BasePythonRewritingSearcher):
+  """Parses the pattern as a ``--mode=py.expr`` template."""
+
+  @classmethod
+  def from_pattern(cls, pattern: str,  templates: Optional[Dict[str, formatting.Template]]) -> "PyExprRewritingSearcher":
+    """Creates a searcher from a ``--mode=py.expr`` template."""
+    return cls.from_matcher(
+        syntax_matchers.ExprPattern(pattern), templates=templates)
+
+
+class PyStmtRewritingSearcher(BasePythonRewritingSearcher):
+  """Parses the pattern as a ``--mode=py.stmt`` template."""
+
+  @classmethod
+  def from_pattern(cls, pattern: str,  templates: Optional[Dict[str, formatting.Template]]) -> "PyStmtRewritingSearcher":
+    """Creates a searcher from a ``--mode=py.stmt`` template."""
+    return cls.from_matcher(
+        syntax_matchers.StmtPattern(pattern), templates=templates)
 
 
 def rewrite_string(
