@@ -83,7 +83,7 @@ from __future__ import division
 from __future__ import print_function
 
 import re
-from typing import Container, Dict, List, Sequence
+from typing import Container, Dict, List, Sequence, Hashable
 import weakref
 
 import attr
@@ -237,17 +237,26 @@ class Once(matcher.Matcher):
 
   Matches if the submatcher has ever matched, including in this run. Fails if
   the matcher has not ever matched.
+
+  If ``key`` is provided, then any other ``Once()`` with the same key shares
+  state, and is considered equivalent for the sake of the above.
   """
   _submatcher = matcher.submatcher_attrib()
+  _key = attr.ib(type=Hashable)
+
+  @_key.default
+  def _key_default(self):
+    return self
+
 
   @matcher.accumulating_matcher
   def _match(self, context, candidate):
-    if context.has_run(self):
+    if context.has_run(self._key):
       return
 
     m = self._submatcher.match(context, candidate)
     if m is not None:
-      context.set_has_run(self)
+      context.set_has_run(self._key)
     yield m
 
   type_filter = None

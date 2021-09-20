@@ -432,6 +432,17 @@ class OnceTest(matcher_test_util.MatcherTestCase):
     # if they are not one, because the result is cached.
     self.assertIsNotNone(m.match(_FAKE_CONTEXT.new(), [1, 2, 3]))
 
+  def test_key(self):
+    shared = 'shared'
+    once_any = base_matchers.Once(base_matchers.Anything(), key=shared)
+    once_never = base_matchers.Once(
+        base_matchers.Unless(base_matchers.Anything()), key=shared)
+
+    # once_never reuses the cached result of once_any, because they share a key.
+    m = base_matchers.ItemsAre([once_any, once_never])
+    self.assertIsNotNone(m.match(_FAKE_CONTEXT.new(), [1, 2]))
+
+
   def test_bindings(self):
     m = base_matchers.Once(base_matchers.Bind('foo'))
     self.assertEqual(

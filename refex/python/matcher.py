@@ -88,7 +88,7 @@ import functools
 import itertools
 import sys
 import tokenize
-from typing import Any, Dict, Iterator, Optional, Set, Text, Union
+from typing import Any, Dict, Iterator, Optional, Set, Text, Union, Hashable
 import weakref
 
 from absl import logging
@@ -255,14 +255,14 @@ class MatchContext(object):
   """
   parsed_file = attr.ib(type=PythonParsedFile)
 
-  _has_successful_run = attr.ib(type=Set[Any], factory=set)
-  _has_match_run = attr.ib(type=Set[Any], factory=set)
+  _has_successful_run = attr.ib(type=Set[Hashable], factory=set)
+  _has_match_run = attr.ib(type=Set[Hashable], factory=set)
 
   def new(self) -> 'MatchContext':
     """Returns a new context for the same file, sharing ``has_run`` state."""
     return attr.evolve(self, has_match_run=set())
 
-  def has_run(self, key: Any) -> bool:
+  def has_run(self, key: Hashable) -> bool:
     """Returns if ``set_has_run`` was called in this or a prior successful match.
 
     Check ``has_run(key)`` before doing work that should be done once-per-file,
@@ -281,7 +281,7 @@ class MatchContext(object):
     """
     return key in self._has_successful_run or key in self._has_match_run
 
-  def set_has_run(self, key: Any):
+  def set_has_run(self, key: Hashable):
     self._has_match_run.add(key)
 
   def update_success(self, successful_context: 'MatchContext'):
@@ -706,12 +706,13 @@ class MatchInfo(object):
   replacements = attr.ib(factory=dict, type=Dict[str, formatting.Template])
 
   @classmethod
-  def from_diff(cls,
-                metavariable_prefix: str,
-                before: str,
-                after: str,
-                match=_match.Match(),
-) -> 'MatchInfo':
+  def from_diff(
+      cls,
+      metavariable_prefix: str,
+      before: str,
+      after: str,
+      match=_match.Match(),
+  ) -> 'MatchInfo':
     """Returns a minimized ``MatchInfo`` for the diff of before/after.
 
     Args:
