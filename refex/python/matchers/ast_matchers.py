@@ -186,18 +186,12 @@ if sys.version_info >= (3, 8):
 
     type_filter = frozenset({ast.Constant})
 
-  # defined in _generate_syntax_matchers_for_type_tree, and shadows
-  # the builtin Ellipsis.
-  del Ellipsis  # pylint: disable=redefined-builtin
-  # Store the Ellipsis builtin to avoid later shadowing by the Ellipsis matcher.
-  _ELLIPSIS = Ellipsis  # pylint: disable=used-before-assignment
-
-  @matcher.safe_to_eval  # pylint: disable=function-redefined
+  @matcher.safe_to_eval  # pylint: disable=redefined-builtin
   @attr.s(frozen=True)
   class Ellipsis(matcher.Matcher):
 
     def _match(self, context, candidate):
       return _constant_match(context, candidate,
-                             base_matchers.Equals(_ELLIPSIS), type(_ELLIPSIS))
+                             base_matchers.Equals(...), type(...))
 
     type_filter = frozenset({ast.Constant})
