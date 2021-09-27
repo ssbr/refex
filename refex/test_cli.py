@@ -935,6 +935,27 @@ class MainTest(MainTestBase):
     self.main(['--mode=py.expr', '2', '--sub=2 + x', f.full_path, '-i'])
     self.assertEqual(f.read_text(), src.replace('2', '2 + x'))
 
+  def test_py_slice_rewrite(self):
+    src = textwrap.dedent("""\
+        a[1:]
+        a[:1]
+        a[:]
+        a[:,1]
+        a[1,:]
+        a[:,:]
+        """)
+    f = self.create_tempfile(content=src)
+    try:
+      self.main([
+          '--mode=py', 'Subscript(slice=Bind("i"))', '--named-sub=i=$i',
+          f.full_path, '-i'
+      ])
+    except SystemExit as e:
+      if sys.version_info >= (3, 9):
+        raise
+
+    self.assertEqual(f.read_text(), src)
+
   def test_py_dict_search(self):
     """Dicts have a weird navigation order that could break serialization."""
     f = self.create_tempfile(content='{1:1,1:1}\n')

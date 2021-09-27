@@ -107,6 +107,29 @@ def _generate_syntax_matchers_for_type_tree(d, ast_node_type_root):
 
 _generate_syntax_matchers_for_type_tree(globals(), ast.AST)
 
+if sys.version_info < (3, 9):
+  # Slices pre-3.9 don't carry a col_offset, causing them to, in some cases,
+  # be completely incorrect.
+  # In particular, they will be incorrect for slices with no subexpressions,
+  # such as `foo[:]``, and for extended slices, such as `foo[:,i]`.
+  # Rather than keep support around, we disable this, with a workaround
+  # suggested for the very danger inclined.
+
+  @matcher.safe_to_eval
+  @attr.s(frozen=True, kw_only=True)
+  class Subscript(Subscript):  # pylint: disable=undefined-variable
+    slice = matcher.submatcher_attrib(default=base_matchers.Anything())
+
+    @slice.validator
+    def _slice_validator(self, attribute, value):
+      del attribute  # unused
+      if isinstance(value, base_matchers.Bind):
+        raise ValueError(
+            'slice=Bind(...) not supported in Python < 3.9. It will fail to '
+            'correctly match e.g. `a[:]` or `a[1,:]`. Upgrade to Python 3.9, or'
+            ' work around this using AllOf(Bind(...)) if that is OK.')
+
+
 # Compatibility classes. e.g. in 3.8, isinstance(ast.Num(3), ast.Num) is false.
 # Instead, we replace with hand-written matchers that match an ast.Constant
 # in the same circumstances. Same with any other backwards-incompatible changes.
