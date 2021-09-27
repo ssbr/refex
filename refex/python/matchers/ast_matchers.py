@@ -46,11 +46,9 @@ from __future__ import division
 from __future__ import print_function
 
 import ast
-import functools
 import sys
 
 import attr
-import six
 
 from refex.python import matcher
 from refex.python.matchers import base_matchers
@@ -78,26 +76,13 @@ class _AstNodeMatcher(matcher.Matcher):
     ty = attr.make_class(
         ast_node_type.__name__,
         {
-            field: matcher.submatcher_attrib(
-                default=base_matchers.Anything(),
-                kw_only=not six.PY2,
-            ) for field in ast_node_type._fields
+            field: matcher.submatcher_attrib(default=base_matchers.Anything(),)
+            for field in ast_node_type._fields
         },
         bases=(cls,),
         frozen=True,
+        kw_only=True,
     )
-    # HACK: in Python 2 we can't use kw_only, so we simulate it by wrapping
-    # __init__ with something taking no positional arguments. This only works
-    # because _all_ parameters are kwonly.
-    if six.PY2:
-      # Note: functools.wraps() doesn't care if it's an unbound method object.
-      old_init = ty.__init__
-
-      @functools.wraps(old_init)
-      def new_init(self, **kwargs):
-        return old_init(self, **kwargs)
-
-      ty.__init__ = new_init
     ty._ast_type = ast_node_type  # pylint: disable=protected-access
     ty.type_filter = frozenset({ast_node_type})
     return ty
