@@ -16,6 +16,7 @@
 """A simple test of the example binary."""
 
 import subprocess
+import sys
 
 from absl.testing import absltest
 
