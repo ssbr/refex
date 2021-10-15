@@ -530,8 +530,8 @@ class Equals(matcher.ImplicitEquals):
 class TypeIs(matcher.Matcher):
   """Matches a candidate iff its type is precisely ``_type``.
 
-  For example, `TypeIs(ast.Expr)` is roughly equivalent to the empty
-  `ast_matchers.Expr()`.
+  For example, ``TypeIs(ast.Expr)`` is roughly equivalent to the empty
+  ``ast_matchers.Expr()``.
 
   (This does *not* check any type information for the code that this candidate
   AST node might represent.)

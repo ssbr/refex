@@ -17,6 +17,9 @@
 ---------------------------------------------
 
 Matchers for integrating with external tooling.
+
+.. autoclass:: RewriteFile
+.. autoclass:: ExternalCommand
 """
 # pyformat: enable
 

@@ -76,8 +76,31 @@ StmtPattern
 ~~~~~~~~~~~
 
 .. autoclass:: StmtPattern
+
+Tree-walking Matchers
+~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: HasParent
+.. autoclass:: IsOrHasAncestor
+.. autoclass:: HasAncestor
+.. autoclass:: HasChild
+.. autoclass:: IsOrHasDescendant
+.. autoclass:: HasDescendant
+.. autoclass:: HasFirstAncestor
+.. autoclass:: HasPrevSibling
+.. autoclass:: HasNextSibling
+
+High Level Syntax Matchers
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: NamedFunctionDefinition
+.. autoclass:: InNamedFunction
+.. autoclass:: WithTopLevelImport
+
 """
 # pyformat: Enable
+
+# pylint: disable=g-classes-have-attributes
 
 from __future__ import absolute_import
 from __future__ import division
@@ -537,8 +560,8 @@ class HasParent(matcher.Matcher):
 
   An AST node in this context is considered to be an AST object or a list
   object. Only direct parents are yielded -- the exact object x s.t. the
-  candidate is `x.y` or `x[y]`, for some y. There is no recursive traversal of
-  any kind.
+  candidate is ``x.y`` or ``x[y]``, for some ``y``. There is no recursive
+  traversal of any kind.
 
   Fails the match if the candidate node is not an AST object or list.
   """
@@ -561,7 +584,8 @@ class IsOrHasAncestor(matcher.Matcher):
   """Matches a candidate if it or any ancestor matches the submatcher.
 
   If the candidate directly matches, then that match is returned. Otherwise,
-  the candidate is recursively traversed using HasParent until a match is found.
+  the candidate is recursively traversed using ``HasParent`` until a match is
+  found.
   """
   _submatcher = matcher.submatcher_attrib()
 
@@ -578,7 +602,7 @@ class IsOrHasAncestor(matcher.Matcher):
 class HasAncestor(matcher.Matcher):
   """Matches an AST node if any ancestor matches the submatcher.
 
-  This is equivalent to HasParent(IsOrHasAncestor(...)).
+  This is equivalent to ``HasParent(IsOrHasAncestor(...))``.
   """
   _submatcher = matcher.submatcher_attrib()
 
@@ -596,7 +620,7 @@ class HasChild(matcher.Matcher):
   """Matches an AST node if a direct child matches the submatcher.
 
   An AST node in this context is considered to be an AST object or a list
-  object. Only direct children are yielded -- `AST.member` or `list[index]`.
+  object. Only direct children are yielded -- ``AST.member`` or ``list[index]``.
   There is no recursive traversal of any kind.
 
   Fails the match if the candidate node is not an AST object or list.
@@ -619,7 +643,8 @@ class IsOrHasDescendant(matcher.Matcher):
   """Matches a candidate if it or any descendant matches the submatcher.
 
   If the candidate directly matches, then that match is returned. Otherwise,
-  the candidate is recursively traversed using HasChild until a match is found.
+  the candidate is recursively traversed using ``HasChild`` until a match is
+  found.
   """
   _submatcher = matcher.submatcher_attrib()
 
@@ -636,7 +661,7 @@ class IsOrHasDescendant(matcher.Matcher):
 class HasDescendant(matcher.Matcher):
   """Matches an AST node if any descendant matches the submatcher.
 
-  This is equivalent to HasChild(IsOrHasDescendant(...)).
+  This is equivalent to ``HasChild(IsOrHasDescendant(...))``.
   """
   _submatcher = matcher.submatcher_attrib()
 
@@ -650,11 +675,11 @@ class HasDescendant(matcher.Matcher):
 
 @attr.s(frozen=True)
 class HasFirstAncestor(matcher.Matcher):
-  """The first ancestor to match `first_ancestor` also matches `also_matches`.
+  """The first ancestor to match ``first_ancestor`` also matches ``also_matches``.
 
   For example, "the function that I am currently in is a generator function" is
   a matcher that one might want to create, and can be created using
-  HasFirstAncestor.
+  ``HasFirstAncestor``.
   """
   _first_ancestor = matcher.submatcher_attrib()
   _also_matches = matcher.submatcher_attrib()
@@ -682,7 +707,7 @@ class HasFirstAncestor(matcher.Matcher):
 @matcher.safe_to_eval
 @attr.s(frozen=True)
 class HasPrevSibling(matcher.Matcher):
-  """Matches a node if the immediate prior sibling in the node list matches submatcher."""
+  """Matches a node if the immediate prior sibling in the node list matches ``submatcher``."""
   _submatcher = matcher.submatcher_attrib()
 
   def _match(self, context, candidate):
@@ -695,7 +720,7 @@ class HasPrevSibling(matcher.Matcher):
 @matcher.safe_to_eval
 @attr.s(frozen=True)
 class HasNextSibling(matcher.Matcher):
-  """Matches a node if the immediate next sibling in the node list matches submatcher."""
+  """Matches a node if the immediate next sibling in the node list matches ``submatcher``."""
   _submatcher = matcher.submatcher_attrib()
 
   def _match(self, context, candidate):
@@ -710,11 +735,11 @@ class HasNextSibling(matcher.Matcher):
 class NamedFunctionDefinition(matcher.Matcher):
   """A matcher for a named function definition.
 
-  In Python 3, this includes both regular functions and async functions.
+  This includes both regular functions and async functions.
 
-  Constructor arguments:
+  Args:
     body: The matcher for the function body.
-    returns: The matcher for the return type annotation. Ignored on Python 2.
+    returns: The matcher for the return type annotation.
   """
 
   _body = matcher.submatcher_attrib(default=base_matchers.Anything())
@@ -747,7 +772,7 @@ class NamedFunctionDefinition(matcher.Matcher):
 @matcher.safe_to_eval
 @attr.s(frozen=True)
 class InNamedFunction(matcher.Matcher):
-  """Matches anything directly inside of a function that matches `submatcher`."""
+  """Matches anything directly inside of a function that matches ``submatcher``."""
   _submatcher = matcher.submatcher_attrib()
 
   @cached_property.cached_property
@@ -764,12 +789,11 @@ class InNamedFunction(matcher.Matcher):
 class WithTopLevelImport(matcher.Matcher):
   """Matches an AST node if there is a top level import for the given module.
 
-  Constructor arguments:
-
+  Args:
     submatcher: The matcher to filter results from.
-    module_name: The fully-qualified module name as a string. e.g. 'os.path'.
+    module_name: The fully-qualified module name as a string. e.g. ``'os.path'``.
     as_name: The variable name the module is imported as.
-      Defaults to the name one would get from e.g. 'from os import path'.
+      Defaults to the name one would get from e.g. ``from os import path``.
   """
   # TODO: Would be nice to match on function-local imports as well.
   # TODO: Would be nice to use submatchers for module_name/as_name.
@@ -806,10 +830,10 @@ class WithTopLevelImport(matcher.Matcher):
 def _top_level_imports(tree):
   """Returns dict of module names to variable names for top-level imports.
 
-  For example, 'from os import path' leads to {'os.path': 'path'}.
+  For example, ``'from os import path'`` leads to ``{'os.path': 'path'}``.
 
   Args:
-    tree: An ast.Module.
+    tree: An ``ast.Module``.
 
   Returns:
     The top level imports as a dict from module name to variable name.
