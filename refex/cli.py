@@ -24,7 +24,6 @@ point to allow for users to extend the refex CLI with new features.
 """
 from __future__ import absolute_import
 from __future__ import division
-# from __future__ import google_type_annotations
 from __future__ import print_function
 
 import argparse

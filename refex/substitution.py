@@ -45,7 +45,6 @@ The following functions and classes can convert a Substitution into a diff.
 
 from __future__ import absolute_import
 from __future__ import division
-# from __future__ import google_type_annotations
 from __future__ import print_function
 
 import collections
