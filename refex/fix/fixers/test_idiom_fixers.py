@@ -250,7 +250,6 @@ class NoneReturnFixerTest(absltest.TestCase):
     """return None is fine if the function returns Optional[T]."""
     # TODO(b/117351081):  port this test to work on vanilla Python.
     example = textwrap.dedent("""
-      # from __future__ import google_type_annotations
       import typing
       from typing import Optional
 
