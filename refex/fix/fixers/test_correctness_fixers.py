@@ -61,6 +61,19 @@ class SimpleFixersTest(parameterized.TestCase):
     """).format(string_prefix)
     self.assertEqual(after, _rewrite(self.fixers, before))
 
+  @parameterized.parameters('None', 'True', 'False')
+  def test_is_named_constant(self, constant):
+    """Named constants aren't fixed by the is check: identity is guaranteed."""
+    before = f'x is {constant}'
+    self.assertEqual(before, _rewrite(self.fixers, before))
+
+  @parameterized.parameters('42', '0x42', '0b01', '6.6', '1e1', '1j', '"s"',
+                            'u"s"', 'b"s"')
+  def test_is_unnamed_constant(self, constant):
+    before = f'x is {constant}'
+    after = f'x == {constant}'
+    self.assertEqual(after, _rewrite(self.fixers, before))
+
 
 if __name__ == '__main__':
   absltest.main()

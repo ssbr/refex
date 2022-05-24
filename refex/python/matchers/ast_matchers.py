@@ -138,7 +138,11 @@ if sys.version_info >= (3, 8):
   def _constant_match(context, candidate, value_matcher, value_types):
     if type(candidate) != ast.Constant:  # pylint: disable=unidiomatic-typecheck
       return None
-    if not isinstance(candidate.value, value_types):
+    # note: not isinstance. The only concrete subclass that can occur in a
+    # Constant AST is bool (which subclasses int). And in that case, we actually
+    # don't want to include it -- Num() should not match `True`!.
+    # Instead, all types must be listed out explicitly.
+    if type(candidate.value) not in value_types:
       return None
     result = value_matcher.match(context, candidate.value)
     if result is None:
@@ -162,7 +166,7 @@ if sys.version_info >= (3, 8):
     s = matcher.submatcher_attrib(default=base_matchers.Anything())
 
     def _match(self, context, candidate):
-      return _constant_match(context, candidate, self.s, bytes)
+      return _constant_match(context, candidate, self.s, (bytes,))
 
     type_filter = frozenset({ast.Constant})
 
@@ -172,7 +176,7 @@ if sys.version_info >= (3, 8):
     s = matcher.submatcher_attrib(default=base_matchers.Anything())
 
     def _match(self, context, candidate):
-      return _constant_match(context, candidate, self.s, str)
+      return _constant_match(context, candidate, self.s, (str,))
 
     type_filter = frozenset({ast.Constant})
 
@@ -191,7 +195,7 @@ if sys.version_info >= (3, 8):
   class Ellipsis(matcher.Matcher):
 
     def _match(self, context, candidate):
-      return _constant_match(context, candidate,
-                             base_matchers.Equals(...), type(...))
+      return _constant_match(context, candidate, base_matchers.Equals(...),
+                             (type(...),))
 
     type_filter = frozenset({ast.Constant})

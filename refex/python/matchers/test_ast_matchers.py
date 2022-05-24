@@ -130,8 +130,9 @@ class ConstantTest(parameterized.TestCase):
             num_matcher.match(
                 matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
-  def test_num_non_number(self):
-    parsed = matcher.parse_ast('"string"', '<string>')
+  @parameterized.parameters('"string"', 'b"bytes"', 'True', 'None')
+  def test_num_non_number(self, non_number):
+    parsed = matcher.parse_ast(non_number, '<string>')
     self.assertIsNone(ast_matchers.Num().match(
         matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
