@@ -79,6 +79,7 @@ from __future__ import print_function
 import abc
 import ast
 import collections
+from collections.abc import Sequence
 import contextlib
 import copy
 import difflib
@@ -837,7 +838,7 @@ def _stringify_candidate(context, candidate):
   if isinstance(candidate, ast.AST):
     return 'line %s: %r' % (getattr(candidate, 'lineno', '??'),
                             context.parsed_file.ast_tokens.get_text(candidate))
-  elif isinstance(candidate, collections.Sequence) and not isinstance(
+  elif isinstance(candidate, Sequence) and not isinstance(
       candidate, six.string_types):
     return reprlib.repr([
         _stringify_candidate(context, subcandidate)
