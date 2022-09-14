@@ -188,4 +188,32 @@ SIMPLE_PYTHON_FIXERS = [
         default='{}', keyword_replacement='factory=dict'),
     _attrib_mutable_default_fixer(
         default='set()', keyword_replacement='factory=set'),
+    fixer.SimplePythonFixer(
+        message=(
+            'utcfromtimestamp() returns a timezone-naive UTC datetime, which '
+            'is bug-prone.'),
+        url='https://docs.python.org/3/library/datetime.html#datetime.datetime.utcfromtimestamp',
+        category='refex.correctness.datetime.utcfromtimestamp',
+        matcher=syntax_matchers.ExprPattern(
+            'datetime.datetime.utcfromtimestamp($a)'),
+        replacement=syntactic_template.PythonExprTemplate(
+            'datetime.datetime.fromtimestamp($a, tz=datetime.timezone.utc)'),
+        example_fragment='datetime.datetime.utcfromtimestamp(foo)',
+        example_replacement=(
+            'datetime.datetime.fromtimestamp(foo, tz=datetime.timezone.utc)'),
+    ),
+    fixer.SimplePythonFixer(
+        message=(
+            'utcnow() returns a timezone-naive UTC datetime, which is '
+            'bug-prone.'),
+        url='https://docs.python.org/3/library/datetime.html#datetime.datetime.utcnow',
+        category='refex.correctness.datetime.utcnow',
+        matcher=syntax_matchers.ExprPattern(
+            'datetime.datetime.utcnow()'),
+        replacement=syntactic_template.PythonExprTemplate(
+            'datetime.datetime.now(tz=datetime.timezone.utc)'),
+        example_fragment='datetime.datetime.utcnow()',
+        example_replacement=(
+            'datetime.datetime.now(tz=datetime.timezone.utc)'),
+    ),
 ]

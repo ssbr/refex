@@ -402,6 +402,12 @@ class DefaultFixerTest(absltest.TestCase):
           # literal equality isn't equivalent to literal is, so don't check
           # for equivalent semantics.
           continue
+        if fx._category in (
+            'refex.correctness.datetime.utcfromtimestamp',
+            'refex.correctness.datetime.utcnow',
+        ):
+          # These fixes intentionally change the value of the expression.
+          continue
         if 'has_key' in (fx._category or ''):
           # The has_key fix intentionally rewrites expressions.
           continue
