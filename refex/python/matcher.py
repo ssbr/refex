@@ -161,7 +161,13 @@ def _fix_init(cls):
       old_init(*args, **kwargs)
     except TypeError as e:
       if len(e.args) == 1 and isinstance(e.args[0], str):
-        e.args = (e.args[0].replace('__init__', cls.__name__),)
+        if sys.version_info >= (3, 10):
+          # In Python 3.10+, it contains `OriginClassName.__init__` instead of
+          # simply `__init__`.
+          origin_name = old_init.__qualname__
+        else:
+          origin_name = '__init__'
+        e.args = (e.args[0].replace(origin_name, cls.__name__),)
       raise
   cls.__init__ = new_init
   return cls
