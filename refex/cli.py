@@ -177,13 +177,12 @@ class RefexRunner(object):
       return []
 
   def write(self, path, result, matches):
-    if not self.dry_run:
-      try:
-        with io.open(path, 'wb') as f:
-          result.data = formatting.apply_substitutions(result.data, matches)
-          self.codec.write(f, result)
-      except IOError as e:
-        print('skipped %s: IOError: %s' % (path, e), file=sys.stderr)
+    try:
+      with io.open(path, 'wb') as f:
+        result.data = formatting.apply_substitutions(result.data, matches)
+        self.codec.write(f, result)
+    except IOError as e:
+      print('skipped %s: IOError: %s' % (path, e), file=sys.stderr)
 
   # TODO(b/131232240): Make this thread safe.
   def log_changes(self, content, matches, name, renderer):
@@ -245,7 +244,8 @@ class RefexRunner(object):
           has_changes |= (
               self.log_changes(result.data, matches, display_name,
                                self.renderer))
-          self.write(write, result, matches)
+          if not self.dry_run and matches:
+            self.write(write, result, matches)
     if has_changes and self.dry_run:
       # If there were changes that the user might have wanted to apply, but they
       # were in dry run mode, print a note for them.
