@@ -236,6 +236,7 @@ _MUTABLE_CONSTANT_FIXERS = (
 
 _NEGATION_CATEGORY = 'pylint.g-comparison-negation'
 _UNNECESSARY_COMPREHENSION_CATEGORY = 'idioms.uncessary-comprehension'
+_OS_PATH_CATEGORY = 'idioms.os-path'
 
 _Try = getattr(ast_matchers, 'Try', getattr(ast_matchers, 'TryExcept', None))  # type alias; pylint: disable=invalid-name
 
@@ -396,6 +397,22 @@ SIMPLE_PYTHON_FIXERS = [
         '{$a for $a in $b}',
         'set($b)',
         category=_UNNECESSARY_COMPREHENSION_CATEGORY),
+    idiom_fixer(
+        '$a = os.path.split($b)[0]',
+        '$a = os.path.dirname($b)',
+        category=_OS_PATH_CATEGORY),
+    idiom_fixer(
+        '$a = os.path.split($b)[1]',
+        '$a = os.path.basename($b)',
+        category=_OS_PATH_CATEGORY),
+    idiom_fixer(
+        '$a, _ = os.path.split($b)',
+        '$a = os.path.dirname($b)',
+        category=_OS_PATH_CATEGORY),
+    idiom_fixer(
+        '_ , $a = os.path.split($b)',
+        '$a = os.path.basename($b)',
+        category=_OS_PATH_CATEGORY),
 ] + list(_MUTABLE_CONSTANT_FIXERS) + list(_LOGGING_FIXERS)
 
 # TODO(b/152805392): + _NONE_RETURNS_FIXERS
