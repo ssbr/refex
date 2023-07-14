@@ -25,7 +25,6 @@ from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import six
 
 from refex.python import matcher
 from refex.python import matcher_test_util
@@ -604,7 +603,6 @@ class NamedFunctionTest(matcher_test_util.MatcherTestCase):
                 body=syntax_matchers.HasDescendant(2)),
             'def f1(): pass\ndef f2(): 2\n'), ['def f2(): 2'])
 
-  @unittest.skipIf(six.PY2, "Python 2 doesn't support annotations.")
   def test_returns(self):
     self.assertEqual(
         self.get_all_match_strings(

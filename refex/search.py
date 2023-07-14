@@ -86,9 +86,6 @@ Concrete Searchers
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import abc
 import ast
@@ -102,7 +99,6 @@ from typing import (Dict, Iterable, Mapping, MutableMapping, MutableSequence,
 from absl import logging
 import attr
 import cached_property
-import six
 
 from refex import formatting
 from refex import match
@@ -306,7 +302,7 @@ def _compile_substitutions(substitutions: Iterable[substitution.Substitution],
   )
 
 
-class AbstractSearcher(six.with_metaclass(abc.ABCMeta)):
+class AbstractSearcher(metaclass=abc.ABCMeta):
   """A class which finds search/replace results."""
 
   def parse(self, data: Text, path: str):
@@ -502,7 +498,7 @@ def _pragma_excluded_ranges(
   disabled = _pragma_ranges(parsed, 'disable')
   enabled = _pragma_ranges(parsed, 'enable')
   # gross O(n^2) search; probably doesn't matter.
-  for category, ranges in six.iteritems(disabled):
+  for category, ranges in disabled.items():
     if category not in enabled:
       continue
     for i, (disabled_start, disabled_end) in enumerate(ranges):

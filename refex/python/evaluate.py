@@ -25,9 +25,6 @@ For convenience, these are also available without the module name (e.g. as
 matcher with the same name.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import textwrap
 

@@ -13,12 +13,9 @@
 # limitations under the License.
 """Tests for cli."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import argparse
 import contextlib
+import io
 import json
 import os
 import re
@@ -29,8 +26,6 @@ from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import six
-
 from refex import cli
 
 
@@ -45,7 +40,7 @@ class ParseArgsLeftoversTest(absltest.TestCase):
   def test_unknown_args(self):
     parser = argparse.ArgumentParser()
     with self.assertRaises(SystemExit):
-      with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+      with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
         cli._parse_args_leftovers(
             parser, ['x', '--unknown-arg', 'y', '--unknown-arg2', 'z'])
     self.assertEndsWith(
@@ -81,7 +76,7 @@ class ParseArgsLeftoversTest(absltest.TestCase):
 class ExceptionTest(absltest.TestCase):
 
   def test_excepthook(self):
-    err = six.StringIO()
+    err = io.StringIO()
     try:
       raise ZeroDivisionError('Hello world.')
     except ZeroDivisionError:
@@ -124,7 +119,7 @@ class MainTestBase(parameterized.TestCase):
     # an exception during testing. (Especially difficult if e.g. the test
     # was run in cloud CI or something which doesn't let you download the file.)
     argv = ['refex', '--nocolor', '--verbose'] + args
-    with contextlib.redirect_stdout(six.StringIO()) as fake_stdout:
+    with contextlib.redirect_stdout(io.StringIO()) as fake_stdout:
       try:
         self.raw_main(argv)
       except SystemExit as e:
@@ -149,7 +144,7 @@ class MainTest(MainTestBase):
   def test_unknown_args(self):
     """Tests that unknown arguments cause an error."""
     with self.assertRaises(SystemExit):
-      with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+      with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
         self.main(['--mode=re', 'pattern', '--unknown-arg', '--unknown-arg2'])
     self.assertEndsWith(
         fake_stderr.getvalue(),
@@ -550,7 +545,7 @@ class MainTest(MainTestBase):
       # we could read, but due to subsequent changes (e.g. race conditions)
       # we cannot.
       with self.subTest(file=deleted_file):
-        with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+        with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
           output = self.main(['--mode=re', 'xyzzy', deleted_file])
         self.assertEqual(output, '')
         self.assertEqual(fake_stderr.getvalue(), '')
@@ -559,7 +554,7 @@ class MainTest(MainTestBase):
     f = self.create_tempfile(content='xyzzy\n')
     os.chmod(f.full_path, 0)  # Make unreadable.
 
-    with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+    with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
       output = self.main(['--mode=re', 'xyzzy', f.full_path])
     self.assertEqual(output, '')
     self.assertRegex(fake_stderr.getvalue(),
@@ -567,7 +562,7 @@ class MainTest(MainTestBase):
 
   def test_error_reporting(self):
     f = self.create_tempfile(content='42')
-    with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+    with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
       self.main([
           '--mode=py', 'Bind("x", TestOnlyRaise("error message"))',
           '--named-sub=x=2', f.full_path
@@ -601,7 +596,7 @@ class MainTest(MainTestBase):
   def test_error_reading(self):
     f = self.create_tempfile(content='42')
     os.chmod(f.full_path, 0)  # remove access.
-    with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+    with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
       self.main(['--mode=re', '42', '--sub=0', f.full_path])
     lines = fake_stderr.getvalue().splitlines()
     self.assertLen(lines, 1)
@@ -611,7 +606,7 @@ class MainTest(MainTestBase):
     f = self.create_tempfile(content='42')
     os.chmod(f.full_path, 0o444)  # Set to read-only.
     try:
-      with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+      with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
         self.main(['--mode=re', '.*', '--sub=0', '-i', f.full_path])
     finally:
       os.chmod(f.full_path, 0o777)
@@ -630,7 +625,7 @@ class MainTest(MainTestBase):
   def test_py_skip_unparseable(self):
     f = self.create_tempfile(content='this is not python code')
 
-    with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+    with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
       output = self.main(['--mode=py', '_', '--no-filename', f.full_path])
     self.assertEqual(output, '')
     self.assertRegex(
@@ -640,7 +635,7 @@ class MainTest(MainTestBase):
   def test_py_skip_nonutf8(self):
     f = self.create_tempfile(content=b'x = "\xff"')
 
-    with contextlib.redirect_stderr(six.StringIO()) as fake_stderr:
+    with contextlib.redirect_stderr(io.StringIO()) as fake_stderr:
       output = self.main(['--mode=py', '_', '--no-filename', f.full_path])
     self.assertEqual(output, '')
     self.assertRegex(
@@ -1055,25 +1050,12 @@ class FixTest(MainTestBase):
     self.assert_fixes('a is not b"xyz"', 'a != b"xyz"')
     self.assert_fixes('a is not r"xyz"', 'a != r"xyz"')
 
-  @unittest.skipUnless(six.PY2, 'This parses python-2 only code. b/116355856')
-  def test_long_literal(self):
-    self.assert_fixes('0L', '0')
-    self.assert_fixes('0l', '0')
-    self.assert_fixes('-1L', '-1')
-    really_big = str(sys.maxsize + 1)
-    self.assert_fixes(really_big + 'L', really_big)
-
   def test_long_literal_nonmatches(self):
     """modern_python_fixers should not try to fix odd-looking non-longs."""
     self.assert_fixes('L', 'L')
     self.assert_fixes('v0L', 'v0L')
     self.assert_fixes('"0L"', '"0L"')
     self.assert_fixes('#0L', '#0L')
-
-  @unittest.skipUnless(six.PY2, 'This parses python-2 only code. b/116355856')
-  def test_octal_literal(self):
-    self.assert_fixes('00', '0o0')  # definitely not an emoticon.
-    self.assert_fixes('-03', '-0o3')  # still not an emoticon.
 
   def test_octal_literal_nonmatches(self):
     """modern_python fixers shouldn't touch the leading 0 in non-octals."""
@@ -1085,21 +1067,6 @@ class FixTest(MainTestBase):
     self.assert_fixes('0b0', '0b0')
     self.assert_fixes('"04"', '"04"')
     self.assert_fixes('#04', '#04')
-
-  @unittest.skipUnless(six.PY2, 'This parses python-2 only code. b/116355856')
-  def test_octal_long(self):
-    self.assert_fixes('04L', '0o4')
-
-  @unittest.skipUnless(six.PY2, 'This fixes python-2 only code. b/116355856')
-  def test_basestring_six(self):
-    self.assert_fixes('import six\n\nisinstance("", basestring)',
-                      'import six\n\nisinstance("", six.string_types)')
-
-  @unittest.skipUnless(six.PY2, 'This fixes python-2 only code. b/116355856')
-  def test_basestring_nosix(self):
-    """Without six, we can't rewrite basestring to six.string_types."""
-    source = 'isinstance("", basestring)'
-    self.assert_fixes(source, source)
 
   def test_assert_equal(self):
     self.assert_fixes('self.assertTrue(a == b)', 'self.assertEqual(a, b)')

@@ -21,7 +21,6 @@ import unittest
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import six
 
 from refex import match
 from refex.python import matcher
@@ -107,9 +106,8 @@ class RawAstTest(absltest.TestCase):
     with self.assertRaises(TypeError):
       ast_matchers.Num(3)  # n=3 is fine though.
 
-    if not six.PY2:
-      with self.assertRaises(TypeError):
-        ast_matchers.Constant(3)  # value=3 is fine though.
+    with self.assertRaises(TypeError):
+      ast_matchers.Constant(3)  # value=3 is fine though.
 
 
 class ConstantTest(parameterized.TestCase):
@@ -136,7 +134,6 @@ class ConstantTest(parameterized.TestCase):
     self.assertIsNone(ast_matchers.Num().match(
         matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
-  @unittest.skipIf(six.PY2, 'ast.Bytes is python 3 only')
   @parameterized.parameters(({'s': b''},), ({},))
   def test_bytes(self, kwargs):
     bytes_matcher = ast_matchers.Bytes(**kwargs)  # hack for py2
@@ -145,7 +142,6 @@ class ConstantTest(parameterized.TestCase):
         bytes_matcher.match(
             matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
-  @unittest.skipIf(six.PY2, 'ast.Bytes is python 3 only')
   def test_bytes_non_bytes(self):
     parsed = matcher.parse_ast('"string"', '<string>')
     self.assertIsNone(ast_matchers.Bytes().match(
@@ -163,7 +159,6 @@ class ConstantTest(parameterized.TestCase):
     self.assertIsNone(ast_matchers.Str().match(
         matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
-  @unittest.skipIf(six.PY2, '`...` is python 3 only')
   def test_ellipsis(self):
     parsed = matcher.parse_ast('...', '<string>')
     self.assertIsNotNone(ast_matchers.Ellipsis().match(
@@ -174,7 +169,6 @@ class ConstantTest(parameterized.TestCase):
     self.assertIsNone(ast_matchers.Ellipsis().match(
         matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
-  @unittest.skipIf(six.PY2, 'NameConstant is python 3 only')
   @parameterized.parameters(True, False, None)
   def test_named_constant(self, constant):
     parsed = matcher.parse_ast(str(constant), '<string>')
@@ -184,7 +178,6 @@ class ConstantTest(parameterized.TestCase):
         self.assertIsNotNone(
             m.match(matcher.MatchContext(parsed), parsed.tree.body[0].value))
 
-  @unittest.skipIf(six.PY2, 'NameConstant is python 3 only')
   def test_named_constant_non_named_constant(self):
     parsed = matcher.parse_ast('1', '<string>')
     self.assertIsNone(ast_matchers.NameConstant().match(

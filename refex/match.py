@@ -54,9 +54,6 @@ This is a useful thing to do:
    that call to become ``foo(b + c)`` rather than ``foo((b + c))``.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 from typing import Any, Tuple
 
@@ -64,7 +61,7 @@ import attr
 
 
 @attr.s(frozen=True)
-class Match(object):
+class Match:
   """A match with no accompanying information.
 
   .. attribute:: string

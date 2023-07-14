@@ -26,7 +26,6 @@ asttokens = "^2"
 attrs = "^19.2"
 cached-property = "^1"
 colorama = "^0.4"
-six="*"
 
 # docs
 m2r = { version = "^0.2", optional = true }

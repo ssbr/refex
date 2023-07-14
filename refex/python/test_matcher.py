@@ -13,9 +13,6 @@
 # limitations under the License.
 """Tests for refex.python.matcher."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import ast
 import collections
@@ -36,7 +33,7 @@ _FAKE_CONTEXT = matcher.MatchContext(matcher.parse_ast('', 'foo.py'))
 
 
 @attr.s(frozen=True)
-class _SubmatcherAttribsClass(object):
+class _SubmatcherAttribsClass:
   submatcher = matcher.submatcher_attrib(default=base_matchers.Anything())
   submatcher_list = matcher.submatcher_list_attrib(
       default=(base_matchers.Anything(),))
@@ -107,7 +104,7 @@ class MergeBindingsTest(absltest.TestCase):
     # preserve order when they're intersected and so on.
 
     @attr.s()
-    class OrderedKeyView(object):
+    class OrderedKeyView:
       """Ordered fake key view for deterministic key iteration order."""
       keys = attr.ib()
 
@@ -124,7 +121,7 @@ class MergeBindingsTest(absltest.TestCase):
         return list(self.keys)
 
     @attr.s()
-    class OrderedBindings(object):
+    class OrderedBindings:
       """OrderedDict wrapper that returns OrderedKeyView."""
       _dict = attr.ib(converter=collections.OrderedDict)
 

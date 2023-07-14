@@ -65,9 +65,6 @@ Templates
 # TODO: Move things into more appropriate places.
 # The doc split above gives a potentially useful split.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import abc
 import collections
@@ -82,7 +79,6 @@ from typing import (Any, Dict, Iterable, Iterator, Mapping, Optional, Set, Text,
 import attr
 import cached_property
 import colorama
-import six
 
 from refex import match as _match
 from refex import parsed_file
@@ -265,7 +261,7 @@ def _sub_diff_blocks(contents, diffs):
 
 
 @attr.s
-class Renderer(object):
+class Renderer:
   """Applies substitutions and gives styled output for humans.
 
   Matches and diffs are styled via ``colorama``.
@@ -442,14 +438,14 @@ class Renderer(object):
     return ''.join(rendered)
 
 
-class _IdDict(object):
+class _IdDict:
 
   def __getitem__(self, label):
     return label
 
 
 @functools.total_ordering
-class _AlwaysGreater(object):
+class _AlwaysGreater:
 
   def __gt__(self, other):
     del other  # unused
@@ -459,7 +455,7 @@ class _AlwaysGreater(object):
     return False
 
 
-class _IdPattern(object):
+class _IdPattern:
   r"""Hacky fake pattern object to get around the fact that we don't have one.
 
   sre_parse expects an existing compiled regexp in order to parse. In
@@ -479,7 +475,7 @@ class _IdPattern(object):
   groups = _AlwaysGreater()
 
 
-class Template(six.with_metaclass(abc.ABCMeta)):
+class Template(metaclass=abc.ABCMeta):
   """A substitution template for matches within a :class:`~refex.parsed_file.ParsedFile`.
 
   Implementations must define a :meth:`substitute_match()` method which returns
@@ -563,7 +559,7 @@ class ShTemplate(Template):
   def variables(self):
     d = collections.defaultdict(str)
     _ = self._template.substitute(d)
-    return six.viewkeys(d)
+    return d.keys()
 
 
 @attr.s(frozen=True)

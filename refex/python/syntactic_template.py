@@ -35,9 +35,6 @@ necessary.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import ast
 import tokenize
@@ -46,7 +43,6 @@ from typing import Text
 from absl import logging
 import attr
 import cached_property
-import six
 
 from refex import formatting
 from refex.python import matcher
@@ -57,7 +53,7 @@ from refex.python.matchers import syntax_matchers
 
 
 @attr.s(frozen=True)
-class _LexicalTemplate(object):
+class _LexicalTemplate:
   """Lexically-aware Python templates.
 
   $variables are only used for replacements if they occur inside Python, not
@@ -80,7 +76,7 @@ class _LexicalTemplate(object):
       var_to_i.setdefault(var, []).append(i)
     object.__setattr__(self, '_tokens', tokenized)
     object.__setattr__(self, '_var_to_i', var_to_i)
-    object.__setattr__(self, 'variables', six.viewkeys(var_to_i))
+    object.__setattr__(self, 'variables', var_to_i.keys())
 
   def substitute(self, replacements):
     """Lexically-aware substitution.
@@ -104,7 +100,7 @@ class _LexicalTemplate(object):
     free_vars = set(self._var_to_i)
     logging.debug('Applying %r to tokens %r for substitution of %r', free_vars,
                   tokens, replacements)
-    for var, new in six.iteritems(replacements):
+    for var, new in replacements.items():
       try:
         all_i = self._var_to_i[var]
       except KeyError:
@@ -137,9 +133,10 @@ class _BasePythonTemplate(formatting.Template):
   _ast_matcher = attr.ib(repr=False, init=False, type=matcher.Matcher)
 
   def __attrs_post_init__(self):
-    if not isinstance(self.template, six.text_type):
-      raise TypeError('Expected text, got: {}'.format(
-          type(self.template).__name__))
+    if not isinstance(self.template, str):
+      raise TypeError(
+          'Expected str, got: {}'.format(type(self.template).__name__)
+      )
 
   @_lexical_template.default
   def _lexical_template_default(self):

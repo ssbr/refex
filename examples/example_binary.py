@@ -18,10 +18,6 @@ This is similar in functionality to a shell script that runs:
     refex --mode=py.expr hello --sub=world -i "$@"
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import sys
 

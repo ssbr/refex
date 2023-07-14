@@ -20,9 +20,6 @@ This module allows you to define your own ``main()`` function by calling
 point to allow for users to extend the refex CLI with new features.
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import abc
 import argparse
@@ -49,7 +46,6 @@ from refex import formatting
 from refex import search
 from refex.fix import find_fixer
 from refex.python import syntactic_template
-import six
 
 _IGNORABLE_ERRNO = frozenset([
     errno.ENOENT,  # file was removed after we went looking
@@ -103,7 +99,7 @@ class UnicodeCodec(Codec):
 
 
 @attr.s
-class RefexRunner(object):
+class RefexRunner:
   """The application logic of the refex CLI app.
 
   This implementation should work for a normal unix-y filesystem. Subclasses can
@@ -263,7 +259,7 @@ _BUG_REPORT_URL = 'https://github.com/ssbr/refex/issues/new/choose'
 
 
 @attr.s
-class _SearchReplaceArgument(object):
+class _SearchReplaceArgument:
   """A --match/--sub pair."""
   #: The pattern.
   match = attr.ib(default=None, type=str)
@@ -459,12 +455,9 @@ def report_failures(failures, bug_report_url, version, verbose):
       print('', file=sys.stderr)
 
   error_blob = dict(failures=failures, argv=sys.argv, version=version)
-  if six.PY2:
-    kw = {'mode': 'wb'}  # ok because of ensure_ascii=True below.
-  else:
-    kw = {'mode': 'w', 'encoding': 'utf-8'}
   with tempfile.NamedTemporaryFile(
-      prefix='rxerr_', suffix='.json', delete=False, **kw) as f:
+      prefix='rxerr_', suffix='.json', delete=False, mode='w', encoding='utf-8'
+  ) as f:
     json.dump(error_blob, f, ensure_ascii=True)
 
   print(
@@ -633,11 +626,14 @@ def _add_rewriter_arguments(parser):
       help='Ignore pragmas that disable substitutions.')
   grep_options.add_argument(
       '--format',
-      type=six.text_type,
+      type=str,
       default='{head}{match}{tail}',
-      help='Format to display matches in. Variables available:'
-      ' head, tail, match, path',
-      metavar='FORMAT')
+      help=(
+          'Format to display matches in. Variables available:'
+          ' head, tail, match, path'
+      ),
+      metavar='FORMAT',
+  )
   grep_options.add_argument(
       '-o',
       '--only-matching',
@@ -763,10 +759,6 @@ def _parse_options(argv, parser):
 
 def argument_parser(version):
   """Creates an :class:`argparse.ArgumentParser` for the refex CLI."""
-  if six.PY2:
-    extra_kwargs = {}
-  else:
-    extra_kwargs = {'allow_abbrev': False}
   parser = argparse.ArgumentParser(
       formatter_class=argparse.RawDescriptionHelpFormatter,
       description=textwrap.dedent("""\
@@ -787,7 +779,8 @@ def argument_parser(version):
             %(prog)s --mode=py.expr 'set($x for $x in $y)' --sub='{{$x for $x in y}}' -R . -i
                 Replace old-style set creation with set comprehensions.
           """),
-      **extra_kwargs)
+      allow_abbrev=False,
+  )
 
   parser.add_argument('--version', action='version', version=version)
 
@@ -804,7 +797,7 @@ def argument_parser(version):
 
   match_options.add_argument(
       'pattern_or_file',
-      type=six.text_type,
+      type=str,
       metavar='PATTERN_OR_FILE',
       nargs='?',
       default=None,
@@ -815,7 +808,7 @@ def argument_parser(version):
 
   match_options.add_argument(
       '--match',
-      type=six.text_type,
+      type=str,
       action=_AddMatchAction,
       help='Pattern expression.',
       metavar='PATTERN',
@@ -824,7 +817,7 @@ def argument_parser(version):
 
   match_options.add_argument(
       '--sub',
-      type=six.text_type,
+      type=str,
       action=_AddSubAction,
       help='Replacement expression, making this search-replace.',
       metavar='REPLACEMENT',
@@ -833,10 +826,12 @@ def argument_parser(version):
   # TODO: Make this work with regular expressions.
   match_options.add_argument(
       '--named-sub',
-      type=six.text_type,
+      type=str,
       action=_AddNamedSubAction,
-      help=('Replacement expression to use for a specific '
-            'bound name. Format is name=replacement.'),
+      help=(
+          'Replacement expression to use for a specific '
+          'bound name. Format is name=replacement.'
+      ),
       dest=search_replace_dest,
   )
 

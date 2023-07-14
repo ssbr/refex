@@ -72,9 +72,6 @@ Concrete Matchers
 """
 # pyformat: enable
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import abc
 import ast
@@ -86,18 +83,16 @@ import difflib
 import enum
 import functools
 import itertools
+import reprlib
 import sys
 import tokenize
-from typing import Any, Dict, Iterator, Optional, Set, Text, Union, Hashable
+from typing import Any, Dict, Hashable, Iterator, Optional, Set, Text, Union
 import weakref
 
 from absl import logging
 import asttokens
 import attr
 import cached_property
-import six
-from six.moves import reprlib
-
 from refex import formatting
 from refex import match
 from refex import parsed_file
@@ -294,7 +289,7 @@ class PythonParsedFile(parsed_file.ParsedFile):
 
 
 @attr.s(frozen=True, eq=False)
-class MatchContext(object):
+class MatchContext:
   """Per-match and per-file context.
 
   One prototype ``MatchContext`` exists per file, containing shared data across
@@ -429,7 +424,7 @@ def create_match(
   if _is_lexical_match(matched):
     return LexicalASTMatch(matched, parsed.text, matched.first_token,
                            matched.last_token)
-  elif isinstance(matched, six.string_types):
+  elif isinstance(matched, str):
     return match.StringMatch(string=matched)
   else:
     return match.ObjectMatch(matched)
@@ -508,7 +503,7 @@ def ast_equivalent(ast1, ast2):
 
 
 @attr.s(frozen=True)
-class _CallableVariant(object):
+class _CallableVariant:
   """Decorator for a callable enum variant."""
   _f = attr.ib()
 
@@ -643,7 +638,7 @@ class BindMerge(enum.Enum):
 
 
 @attr.s(frozen=True)
-class BoundValue(object):
+class BoundValue:
   """Mergeable bound values.
 
   Two :class:`BoundValue` objects will only be merged if they have equal merge
@@ -701,8 +696,8 @@ def merge_bindings(lhs, rhs):
     None if the match cannot succeed due to a failed merge, or else a new dict
     mapping labels to merged BoundValues.
   """
-  lhs_keys = six.viewkeys(lhs)
-  rhs_keys = six.viewkeys(rhs)
+  lhs_keys = lhs.keys()
+  rhs_keys = rhs.keys()
 
   merged_bindings = {}
 
@@ -762,7 +757,7 @@ def merge_replacements(lhs, rhs):
 
 
 @attr.s(frozen=True)
-class MatchInfo(object):
+class MatchInfo:
   """A result object containing a successful match.
 
   Attributes:
@@ -844,8 +839,7 @@ def _stringify_candidate(context, candidate):
   if isinstance(candidate, ast.AST):
     return 'line %s: %r' % (getattr(candidate, 'lineno', '??'),
                             context.parsed_file.ast_tokens.get_text(candidate))
-  elif isinstance(candidate, Sequence) and not isinstance(
-      candidate, six.string_types):
+  elif isinstance(candidate, Sequence) and not isinstance(candidate, str):
     return reprlib.repr([
         _stringify_candidate(context, subcandidate)
         for subcandidate in candidate
@@ -855,7 +849,7 @@ def _stringify_candidate(context, candidate):
 
 
 @attr.s(frozen=True)
-class Matcher(six.with_metaclass(abc.ABCMeta)):
+class Matcher(metaclass=abc.ABCMeta):
   """An immutable AST node matcher.
 
   Reusable subclasses are in :mod:`refex.python.matchers`.
@@ -1051,7 +1045,7 @@ class ParseError(Exception):
 
 
 @attr.s(frozen=True)
-class _CompareById(object):
+class _CompareById:
   """Wrapper object to compare things by identity."""
   value = attr.ib(eq=False)
   _id = attr.ib(init=False)
@@ -1068,7 +1062,7 @@ class _BreadcrumbType(enum.Enum):
 
 
 @attr.s(frozen=True)
-class AstNav(object):
+class AstNav:
   """AST graph navigation.
 
   AstNav gives the parent and sibling relationships of an AST node. It is used
@@ -1348,13 +1342,6 @@ def parse_ast(source_code: str, filename: str = '<string>') -> PythonParsedFile:
   if cache_key in _parsed_ast_cache:
     return _parsed_ast_cache[cache_key]
 
-  # workaround for Python 2 ast module not being able to parse the code if it
-  # has a coding declaration.
-  # It doesn't matter after this as we use the unicode version exclusively.
-  source_code_text = source_code
-  if six.PY2:
-    source_code = source_code.encode('utf-8')
-
   # TODO(b/64560910): Pre/post-process using pasta here.
   # Right now pasta's preprocessing does not preserve byte offsets, and we don't
   # yet have a use for the postprocessing. But, soon!
@@ -1369,7 +1356,7 @@ def parse_ast(source_code: str, filename: str = '<string>') -> PythonParsedFile:
     # it specially.
     raise ParseError('UnicodeDecodeError: {}'.format(e))
   parsed = PythonParsedFile(
-      text=source_code_text,
+      text=source_code,
       path=filename,
       pragmas=tuple(sorted(_pragmas(astt.tokens), key=lambda p: p.start)),
       ast_tokens=astt,

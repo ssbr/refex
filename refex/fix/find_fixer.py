@@ -15,16 +15,12 @@
 
 Fixers can be found in refex/fix/fixers.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import collections
 
 from refex.fix import fixer
 from refex.fix.fixers import correctness_fixers
 from refex.fix.fixers import idiom_fixers
-from refex.fix.fixers import modern_python_fixers
 from refex.fix.fixers import unittest_fixers
 
 _default_fixers = []
@@ -47,7 +43,6 @@ def _register_builtins():
   """Registers the built-in set of fixers. Invoked at import-time."""
   register_fixers('correctness', correctness_fixers.SIMPLE_PYTHON_FIXERS)
   register_fixers('idiom', idiom_fixers.SIMPLE_PYTHON_FIXERS)
-  register_fixers('modern_python', modern_python_fixers.SIMPLE_PYTHON_FIXERS)
   register_fixers('unittest', unittest_fixers.SIMPLE_PYTHON_FIXERS)
 
   for fixers in _extra_fixers.values():

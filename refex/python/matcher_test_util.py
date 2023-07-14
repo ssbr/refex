@@ -13,9 +13,6 @@
 # limitations under the License.
 """Base class and test-only utilities for testing matchers."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 from absl.testing import absltest
 

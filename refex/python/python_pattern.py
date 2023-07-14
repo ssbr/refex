@@ -17,15 +17,11 @@ For example: "a = $b" is a pattern for an assignment statement, where the target
 is a wildcard named "b".
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
+import io
 import re
 import token
 import tokenize
 
-import six
 
 _VARIABLE_REGEX = re.compile(r'\A[a-zA-Z_][a-zA-Z0-9_]*\Z')
 
@@ -63,7 +59,7 @@ def token_pattern(pattern):
     pattern += '\n'
 
   try:
-    tokens = list(tokenize.generate_tokens(six.StringIO(pattern).readline))
+    tokens = list(tokenize.generate_tokens(io.StringIO(pattern).readline))
   except tokenize.TokenError as e:
     raise SyntaxError("Couldn't tokenize %r: %s" % (pattern, e))
 

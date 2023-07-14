@@ -24,7 +24,6 @@ from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
-from six.moves import range
 
 from refex import match
 from refex.python import evaluate

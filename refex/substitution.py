@@ -43,9 +43,6 @@ The following functions and classes can convert a Substitution into a diff.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import collections
 import operator
@@ -54,7 +51,6 @@ from typing import (FrozenSet, Iterable, List, Mapping, Optional, Text, Tuple,
                     Union)
 
 import attr
-import six
 
 # Only slightly structured category name: dot-separated, no empty intra-dot
 # sequences, no whitespace, doesn't begin with a -, and doesn't begin/end on a
@@ -63,7 +59,7 @@ _CATEGORY_NAME_REGEX = re.compile(r'\A[^-.\s][^.\s]*([.][^.\s]+)*\Z')
 
 
 @attr.s(frozen=True)
-class Substitution(object):
+class Substitution:
   """A search result containing optional replacements and metadata.
 
   The span of text being fixed is attached as a dict mapping span identifiers
@@ -132,22 +128,25 @@ class Substitution(object):
       raise ValueError(
           'primary_label ({!r}) not in matched_spans ({!r})'.format(
               self.primary_label, self.matched_spans))
-    if self.replacements is not None and not (six.viewkeys(self.replacements) <=
-                                              six.viewkeys(self.matched_spans)):
+    if self.replacements is not None and not (
+        self.replacements.keys() <= self.matched_spans.keys()
+    ):
       raise ValueError('replacements keys ({!r}) is not a subset of'
                        ' matched_spans keys ({!r})'.format(
                            sorted(self.matched_spans, key=repr),
                            sorted(self.replacements, key=repr)))
 
     if self.replacements is not None:
-      for key, replacement in six.iteritems(self.replacements):
-        if not isinstance(replacement, six.text_type):
+      for key, replacement in self.replacements.items():
+        if not isinstance(replacement, str):
           raise TypeError(
-              'replacements[{key!r}] is of type {actual_type}, expected {expected_type}'
-              .format(
+              'replacements[{key!r}] is of type {actual_type}, expected'
+              ' {expected_type}'.format(
                   key=key,
-                  expected_type=six.text_type.__name__,
-                  actual_type=type(replacement).__name__))
+                  expected_type=str.__name__,
+                  actual_type=type(replacement).__name__,
+              )
+          )
 
   def relative_to_span(self, start: int, end: int) -> Optional['Substitution']:
     """Returns a new substitution that is offset relative to the provided span.
@@ -216,7 +215,7 @@ def _sub_matches_ranges(sub, match_ranges):
 
 
 @attr.s(frozen=True, order=False, eq=True)
-class LabeledSpan(object):
+class LabeledSpan:
   """A part of the original text, verbatim.
 
   A single LabeledSpan has exactly one set of labels that applied to it
@@ -230,7 +229,7 @@ class LabeledSpan(object):
 
 
 @attr.s(frozen=True, order=False, eq=True)
-class DiffSpan(object):
+class DiffSpan:
   """A part of the diff that was changed by the Substitution.
 
   note that unlike :class:`LabeledSpan`, a label may begin or end in the

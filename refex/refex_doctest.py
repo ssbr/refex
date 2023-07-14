@@ -15,9 +15,6 @@
 # python2 python3
 """Run doctests for all of refex's libraries."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 # isort: split
 # We put doctest after absltest so that it picks up the unittest monkeypatch.

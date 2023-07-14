@@ -18,10 +18,6 @@
 
 # No portable raw unicode literal exists without unicode_literals.
 # see https://stackoverflow.com/questions/33027281
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import re
 from typing import Iterable, Mapping, Optional
@@ -32,7 +28,7 @@ import cached_property
 
 
 @attr.s(frozen=True, eq=True, order=False)
-class ParsedFile(object):
+class ParsedFile:
   """A wrapper for a file after preprocessing.
 
   May be subclassed.
@@ -57,6 +53,7 @@ class ParsedFile(object):
   def line_numbers(self):
     return asttokens.LineNumbers(self.text)
 
+
 # Matches a trailing pragma in a piece of text in an re.search.
 _PRAGMA_RE = re.compile(
     r"""
@@ -76,7 +73,7 @@ _PRAGMA_RE = re.compile(
 
 
 @attr.s(frozen=True)
-class Pragma(object):
+class Pragma:
   """A pragma / directive for Refex to alter how it handles files.
 
   Attributes:

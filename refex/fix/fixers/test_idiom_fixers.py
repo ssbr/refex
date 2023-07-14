@@ -12,18 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Lint as python2, python3
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import textwrap
 import unittest
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import six
 
 from refex import search
 from refex.fix import fixer
@@ -222,7 +215,6 @@ class NoneReturnFixerTest(absltest.TestCase):
     """)
     self.assertEqual(after, _rewrite(self.none_fixers, before))
 
-  @unittest.skipIf(six.PY2, 'Testing async functions')
   def test_fixes_async_functions(self):
     before = textwrap.dedent("""
       async def foo(self):

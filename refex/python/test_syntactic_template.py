@@ -13,14 +13,9 @@
 # limitations under the License.
 """Tests for refex.python.syntactic_template."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 from absl.testing import absltest
 from absl.testing import parameterized
-import six
 
 from refex import formatting
 from refex import match
@@ -39,7 +34,7 @@ class LexicalTemplateTest(parameterized.TestCase):
       with self.subTest(template=template):
         replaced = syntactic_template._LexicalTemplate(template).substitute(
             {'x': replacement})
-        self.assertIsInstance(replaced, six.text_type)
+        self.assertIsInstance(replaced, str)
         self.assertEqual(replaced, replacement)
 
   @parameterized.parameters('$ $ $', '\t', ' ')
@@ -47,7 +42,7 @@ class LexicalTemplateTest(parameterized.TestCase):
     """Tests substitution which don't work as templates."""
     replaced = syntactic_template._LexicalTemplate('$x').substitute(
         {'x': replacement})
-    self.assertIsInstance(replaced, six.text_type)
+    self.assertIsInstance(replaced, str)
     self.assertEqual(replaced, replacement)
 
   def test_missing_parameter(self):

@@ -116,7 +116,6 @@ import weakref
 
 import attr
 import cached_property
-import six
 
 from refex.python import matcher
 from refex.python import python_pattern
@@ -747,18 +746,11 @@ class NamedFunctionDefinition(matcher.Matcher):
 
   @cached_property.cached_property
   def _matcher(self):
-    kwargs = {'body': self._body}
-    # We check for the existence of `returns` as an AST field, instead of
-    # checking the Python version, to support backports of the type annotation
-    # syntax to Python 2.
-    if 'returns' in attr.fields_dict(ast_matchers.FunctionDef):
-      kwargs['returns'] = self._returns
-    function_def = ast_matchers.FunctionDef(**kwargs)
-    if six.PY3:
-      function_def = base_matchers.AnyOf(
-          ast_matchers.AsyncFunctionDef(**kwargs),
-          function_def,
-      )
+    kwargs = {'body': self._body, 'returns': self._returns}
+    function_def = base_matchers.AnyOf(
+        ast_matchers.AsyncFunctionDef(**kwargs),
+        ast_matchers.FunctionDef(**kwargs)
+    )
     return function_def
 
   def _match(self, context, candidate):
@@ -865,7 +857,4 @@ def _top_level_imports(tree):
 
 
 def _args(f):
-  if six.PY2:
-    return inspect.getargspec(f)[0]
-  else:
-    return list(inspect.signature(f).parameters.keys())
+  return list(inspect.signature(f).parameters.keys())
