@@ -100,13 +100,16 @@ _IN_FUNCTION_RETURNING_OPTIONAL = syntax_matchers.InNamedFunction(
 # Matches any returning that's not "return" or "return None" (which are two
 # different ast node values: ast.Return(value=None) and
 # ast.Return(value=ast.Name(id='None')) respectively)
-_NON_NONE_RETURN = matcher_.DebugLabeledMatcher(
+_NON_NONE_RETURN = base_matchers.DebugLabeledMatcher(
     'Non-none return',
     ast_matchers.Return(
         value=base_matchers.Unless(
             base_matchers.AnyOf(
-                base_matchers.Equals(None), syntax_matchers.ExprPattern(
-                    'None')))))
+                base_matchers.Equals(None), syntax_matchers.ExprPattern('None')
+            )
+        )
+    ),
+)
 
 _NONE_RETURNS_FIXERS = [
     fixer.SimplePythonFixer(

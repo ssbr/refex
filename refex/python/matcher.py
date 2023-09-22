@@ -921,24 +921,6 @@ class Matcher(metaclass=abc.ABCMeta):
   type_filter = None
 
 
-@attr.s(frozen=True)
-class DebugLabeledMatcher(Matcher):
-  """A matcher which wraps another matcher with a label for debugging."""
-  debug_label = attr.ib(type=Text)
-  submatcher = submatcher_attrib(type=Matcher)
-  log_level = attr.ib(default=logging.DEBUG, type=int)
-
-  @property
-  def _log_level(self):
-    """See base class."""
-    return self.log_level
-
-  def __str__(self):
-    return '[%s]' % (self.debug_label,)
-
-  def _match(self, *args, **kwargs):
-    """See base class."""
-    return self.submatcher.match(*args, **kwargs)
 
 
 def accumulating_matcher(f):

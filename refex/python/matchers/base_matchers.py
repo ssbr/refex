@@ -83,6 +83,7 @@ import re
 from typing import Container, Dict, Hashable, Iterable, List, Sequence
 import weakref
 
+from absl import logging
 import attr
 import cached_property
 from refex import formatting
@@ -438,6 +439,27 @@ class WithReplacements(matcher.Matcher):
         mi,
         replacements=matcher.merge_replacements(mi.replacements,
                                                 self.replacements))
+
+
+@attr.s(frozen=True)
+class DebugLabeledMatcher(matcher.Matcher):
+  """A matcher which wraps another matcher with a label for debugging."""
+
+  debug_label = attr.ib(type=str)
+  submatcher = matcher.submatcher_attrib(type=matcher.Matcher)
+  log_level = attr.ib(default=logging.DEBUG, type=int)
+
+  @property
+  def _log_level(self):
+    """See base class."""
+    return self.log_level
+
+  def __str__(self):
+    return '[%s]' % (self.debug_label,)
+
+  def _match(self, *args, **kwargs):
+    """See base class."""
+    return self.submatcher.match(*args, **kwargs)
 
 
 ######################
