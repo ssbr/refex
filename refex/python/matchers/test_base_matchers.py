@@ -15,10 +15,6 @@
 # python3 python2
 """Tests for refex.python.matchers.base_matchers."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import ast
 from unittest import mock
 
@@ -756,6 +752,144 @@ class InLineTest(matcher_test_util.MatcherTestCase):
     self.assertEqual(
         self.get_all_match_strings(base_matchers.InLines(lines=[2, 4]), source),
         ['c = d', 'g = h'])
+
+
+class GlobTest(parameterized.TestCase):
+
+  @parameterized.parameters(['abc'], [['a', 'b', 'c']])
+  def test_sequence(self, abc_seq):
+    self.assertIsNotNone(
+        base_matchers.Glob(['a', 'b', 'c']).match(_FAKE_CONTEXT, abc_seq)
+    )
+
+  @parameterized.parameters(
+      'prefix_abc',
+      'abc_suffix',
+      '',
+      'axc',
+  )
+  def test_sequence_nomatch(self, not_abc):
+    self.assertIsNone(
+        base_matchers.Glob(['a', 'b', 'c']).match(_FAKE_CONTEXT, not_abc)
+    )
+
+  def test_empty(self):
+    empty_glob = base_matchers.Glob([])
+    self.assertIsNotNone(empty_glob.match(_FAKE_CONTEXT, ''))
+    self.assertIsNone(empty_glob.match(_FAKE_CONTEXT, 'x'))
+
+  @parameterized.parameters(
+      '',
+      'x',
+  )
+  def test_star(self, seq):
+    self.assertIsNotNone(
+        base_matchers.Glob([base_matchers.GlobStar()]).match(_FAKE_CONTEXT, seq)
+    )
+    self.assertIsNotNone(
+        base_matchers.Glob(
+            [base_matchers.GlobStar(), base_matchers.GlobStar()]
+        ).match(_FAKE_CONTEXT, seq)
+    )
+
+  @parameterized.parameters(
+      'ab',
+      'abab',
+  )
+  def test_prefix_star(self, seq):
+    self.assertIsNotNone(
+        base_matchers.Glob(['a', 'b', base_matchers.GlobStar()]).match(
+            _FAKE_CONTEXT, seq
+        )
+    )
+
+  @parameterized.parameters(
+      '',
+      'ba',
+  )
+  def test_prefix_star_nomatch(self, seq):
+    self.assertIsNone(
+        base_matchers.Glob(['a', base_matchers.GlobStar()]).match(
+            _FAKE_CONTEXT, seq
+        )
+    )
+
+  @parameterized.parameters(
+      'ab',
+      'abab',
+  )
+  def test_star_suffix(self, seq):
+    self.assertIsNotNone(
+        base_matchers.Glob([base_matchers.GlobStar(), 'a', 'b']).match(
+            _FAKE_CONTEXT, seq
+        )
+    )
+
+  def test_backtracking(self):
+    self.assertIsNotNone(
+        base_matchers.Glob([
+            base_matchers.GlobStar(),
+            'a',
+            'b',
+            base_matchers.GlobStar(),
+            'c',
+            base_matchers.GlobStar(),
+        ]).match(_FAKE_CONTEXT, 'abcab')
+    )
+
+  @parameterized.parameters(
+      '',
+      'ab',
+  )
+  def test_star_suffix_nomatch(self, seq):
+    self.assertIsNone(
+        base_matchers.Glob([base_matchers.GlobStar(), 'a']).match(
+            _FAKE_CONTEXT, seq
+        )
+    )
+
+  @parameterized.parameters(
+      'abcd',
+      'a  bcd',
+      'abc  d',
+      'a  bc  d',
+  )
+  def test_sandwich(self, seq):
+    glob = base_matchers.Glob([
+        'a',
+        base_matchers.GlobStar(),
+        'b',
+        'c',
+        base_matchers.GlobStar(),
+        'd',
+    ])
+    self.assertIsNotNone(glob.match(_FAKE_CONTEXT, seq))
+
+  def test_greediness(self):
+    """GlobStar matches as little as possible, so that it can match in O(n).
+
+    That is, the algorithm for globbing a*bc*d... is linear if we try to match
+    a, then the _earliest possible_ bc, then d, ...
+    """
+    glob = base_matchers.Glob([
+        base_matchers.Bind('prefix', base_matchers.Anything()),
+        base_matchers.GlobStar(),
+        base_matchers.Bind('middle', base_matchers.Anything()),
+        base_matchers.GlobStar(),
+        base_matchers.Bind('end', base_matchers.Anything()),
+    ])
+    m = glob.match(_FAKE_CONTEXT, 'abcdefg')
+    self.assertIsNotNone(m)
+    self.assertEqual(m.match, match.StringMatch('abcdefg'))
+    bindings = {k: v.value.string for k, v in m.bindings.items()}
+    self.assertEqual(
+        bindings,
+        {
+            'prefix': 'a',
+            'middle': 'b',
+            'end': 'g',
+        },
+    )
 
 
 if __name__ == '__main__':

@@ -78,17 +78,13 @@ File Content Matchers
 """
 # pyformat: enable
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
+import collections
 import re
-from typing import Container, Dict, List, Sequence, Hashable
+from typing import Container, Dict, Hashable, Iterable, List, Sequence
 import weakref
 
 import attr
 import cached_property
-
 from refex import formatting
 from refex import match
 from refex.python import matcher
@@ -755,3 +751,123 @@ class InLines(matcher.Matcher):
           matcher.create_match(context.parsed_file, candidate))
     else:
       return None
+
+
+# TODO: make this public after glob support is implemented, and it's determined
+# this does the right thing.
+# In particular, at time of writing, it does completely the wrong thing with
+# bindings -- you can't add a bound GlobStar() :(
+# @matcher.safe_to_eval
+@attr.s(frozen=True)
+class GlobStar(matcher.Matcher):
+  """Matches any sequence of items in a sequence.
+
+  Only valid within :class:`Glob`.
+  """
+
+  def _match(self, context, candidate):
+    del context, candidate  # unused
+    # _match isn't called by GlobMatcher; it instead specially recognizes it
+    # inside its own search algorithm. GlobMatcher is a bug when present in
+    # any other context.
+    raise matcher.MatchError('GlobStar used outside of Glob')
+
+
+def _blockify_glob_matchers(
+    matchers: Iterable[matcher.Matcher],
+) -> list[GlobStar | list[matcher.Matcher]]:
+  """Matchers separated into GlobStar() and sequential block of non-* matchers."""
+  blocks = []
+  current = []
+  for m in matchers:
+    if isinstance(m, GlobStar):
+      if current:
+        blocks.append(current)
+      current = m
+    else:
+      if isinstance(current, GlobStar):
+        blocks.append(current)
+        current = []
+      current.append(m)
+  blocks.append(current)
+
+  return blocks
+
+
+# TODO: make this public after glob support is implemented (see GlobStar)
+@attr.s(frozen=True)
+class Glob(matcher.Matcher):
+  """Matches a sequence, with :func:`GlobStar` wildcards.
+
+  For example, ``Glob(['a', GlobStar(), 'b'])`` matches any sequence which
+  starts with ``'a'`` and ends with ``'b'``.
+
+  class:`GlobStar()` is only valid directly within the body of a `Glob`.
+  """
+
+  _matchers = matcher.submatcher_list_attrib()
+
+  @cached_property.cached_property
+  def _blocked_matchers(self):
+    return _blockify_glob_matchers(self._matchers)
+
+  def _match(self, context, candidate):
+    if not isinstance(candidate, collections.abc.Sequence):
+      return False
+
+    # https://research.swtch.com/glob
+    #
+    # The following algorithm is courtesy of the insight (from Russ Cox and
+    # others): you can do a backtracking search to find the substrings
+    # ("blocks" here), but not backtrack past the most recent GlobStar, as long
+    # as you take the "earliest possible" choice.
+    #
+    # (The algorithm looks a bit different because we're borrowing the idea,
+    # not the code.)
+
+    # TODO: allow for ``Bind('name', GlobStar())``
+
+    is_search = False
+    pos = 0
+    bindings = {}
+    for block_i, block in enumerate(self._blocked_matchers):
+      if isinstance(block, GlobStar):
+        is_search = True
+        continue
+
+      if is_search:
+        # searched blocks can terminate at the earliest possible point, with the
+        # sole exception of the last block. We handle that by moving the search
+        # to the one place that it could possibly match, for free performance.
+        if block_i == len(self._blocked_matchers) - 1:
+          pos = len(candidate) - len(block)
+          search_end = pos + 1
+        else:
+          search_end = len(candidate)
+      else:
+        search_end = pos + 1  # only one candidate to search.
+
+      is_search = False
+      result = None
+      for match_start in range(pos, search_end):
+        match_end = match_start + len(block)
+        result = ItemsAre(block).match(
+            context, candidate[match_start:match_end]
+        )
+        if result is not None:
+          pos = match_end
+          break
+
+      if result is None:
+        return None
+      bindings = matcher.merge_bindings(bindings, result.bindings)
+      if bindings is None:
+        return None
+
+    if pos != len(candidate) and not is_search:
+      return None
+
+    return matcher.MatchInfo(
+        matcher.create_match(context.parsed_file, candidate),
+        bindings,
+    )
