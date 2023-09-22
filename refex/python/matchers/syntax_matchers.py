@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=g-space-before-docstring-summary, g-no-space-after-docstring-summary, g-short-docstring-punctuation
 # pyformat: disable
 """
 :mod:`~refex.python.matchers.syntax_matchers`
@@ -112,6 +113,7 @@ import inspect
 import itertools
 import textwrap
 import tokenize
+import types
 import weakref
 
 import attr
@@ -153,8 +155,12 @@ def _remap_macro_variables(pattern):
     if variable in original_to_unique:
       remapped_name = original_to_unique[variable]
     else:
+      # using a while loop instead of a for loop to make the infinite loop
+      # obvious to a linter, so that it doesn't think remapped_name is unset.
       # the str calls are for b/115812866
-      for suffix in itertools.chain([''], (str(i) for i in itertools.count())):
+      suffixes = itertools.chain([''], (str(i) for i in itertools.count()))
+      while True:
+        suffix = next(suffixes)
         # We need to add a prefix because e.g. if the variable was named
         # "__foo", it would get mangled inside a class body.
         # This also gives us a nice place to put the disambiguating counter
@@ -209,8 +215,8 @@ def _rewrite_submatchers(pattern, restrictions):
 
 
 # TODO: Use a ast_matchers matcher.
-# It'd be cute to use a ast_matchers matcher here, but matchers don't (yet) support
-# giving detailed explanations for match failure.
+# It'd be cute to use a ast_matchers matcher here, but matchers don't (yet)
+# support giving detailed explanations for match failure.
 # Something like this would be nice:
 # return ast_matchers.Module(
 #     body=base_matchers.ItemsAre([ast_matchers.Expr(value=Bind("expr"))])
@@ -324,9 +330,10 @@ class _BaseAstPattern(matcher.Matcher):
   """
 
   # store the init parameters for a pretty repr.
-  pattern = attr.ib()  # type: Text
+  pattern = attr.ib(type=str)
   restrictions = attr.ib(
-      default=attr.Factory(dict))  # type: Dict[Text, matcher.Matcher]
+      default=attr.Factory(dict),
+      type=dict[str, matcher.Matcher])
 
   _ast_matcher = matcher.submatcher_attrib(
       repr=False,
@@ -342,7 +349,7 @@ class _BaseAstPattern(matcher.Matcher):
           self.pattern, self.restrictions)
       parsed_ast = ast.parse(remapped_pattern)
     except SyntaxError as e:
-      raise ValueError('Failed to parse %r: %s' % (self.pattern, e))
+      raise ValueError('Failed to parse %r: %s' % (self.pattern, e)) from None
     _verify_variables(parsed_ast, variable_names)
     intended_match_ast = self._pull_ast(parsed_ast)
     return base_matchers.Rebind(
@@ -450,7 +457,7 @@ class StmtFromFunctionPattern(matcher.Matcher):
   matcher in an interactive session or other situations where source code isn't
   accessible.
   """
-  func = attr.ib()  # type: Callable
+  func = attr.ib(type=types.FunctionType)
 
   _ast_matcher = matcher.submatcher_attrib(
       repr=False,
@@ -481,9 +488,9 @@ class StmtFromFunctionPattern(matcher.Matcher):
     args = _args(self.func)
     try:
       parsed = ast.parse(source)
-    except SyntaxError:
+    except SyntaxError as e:
       raise ValueError('Function {} appears to have invalid syntax. Is it a'
-                       ' lambda?'.format(self.func.__name__))
+                       ' lambda?'.format(self.func.__name__)) from e
     actual_body = parsed.body[0].body
     if (isinstance(actual_body[0], ast.Expr) and
         isinstance(actual_body[0].value, ast.Str)):

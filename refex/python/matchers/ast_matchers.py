@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=g-space-before-docstring-summary, g-no-space-after-docstring-summary, g-short-docstring-punctuation
 # pyformat: disable
 """
 :mod:`~refex.python.matchers.ast_matchers`
@@ -135,7 +136,13 @@ if sys.version_info < (3, 9):
 # in the same circumstances. Same with any other backwards-incompatible changes.
 if sys.version_info >= (3, 8):
 
-  def _constant_match(context, candidate, value_matcher, value_types):
+  def _constant_match(
+      context,
+      candidate,
+      value_matcher: matcher.Matcher,
+      value_types: tuple[type[object], ...],
+  ):
+    """Match an ``ast.Constant`` against a matcher and type."""
     if type(candidate) != ast.Constant:  # pylint: disable=unidiomatic-typecheck
       return None
     # note: not isinstance. The only concrete subclass that can occur in a
@@ -190,9 +197,9 @@ if sys.version_info >= (3, 8):
 
     type_filter = frozenset({ast.Constant})
 
-  @matcher.safe_to_eval  # pylint: disable=redefined-builtin
+  @matcher.safe_to_eval
   @attr.s(frozen=True)
-  class Ellipsis(matcher.Matcher):
+  class Ellipsis(matcher.Matcher):  # pylint: disable=redefined-builtin
 
     def _match(self, context, candidate):
       return _constant_match(context, candidate, base_matchers.Equals(...),
