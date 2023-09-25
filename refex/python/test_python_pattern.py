@@ -26,18 +26,46 @@ class PythonPatternTest(parameterized.TestCase):
 
   @parameterized.parameters('', 'x', 'x y')
   def test_simple_nonpattern(self, pattern):
-    tokenized, _ = python_pattern.token_pattern(pattern)
+    tokenized, nonrepeating, repeating = python_pattern.token_pattern(pattern)
+    self.assertEmpty(nonrepeating)
+    self.assertEmpty(repeating)
     self.assertEqual(tokenize.untokenize(tokenized), pattern)
 
   @parameterized.parameters('$x', 'foo + $x', 'import $x', '$x "$y"', '$x = 0')
-  def test_simple_pattern(self, pattern):
-    tokenized, [metavar_i] = python_pattern.token_pattern(pattern)
+  def test_nonrepeating_pattern(self, pattern):
+    tokenized, [metavar_i], [] = python_pattern.token_pattern(pattern)
     # token text is 'x' -- that's the only variable in the pattern.
     self.assertEqual(tokenized[metavar_i][1], 'x')
     # it round trips to the same string except $x -> x
     self.assertEqual(tokenize.untokenize(tokenized), pattern.replace('$x', 'x'))
 
-  @parameterized.parameters('$1', '$', '$\n', '$[', '$""', '$ x', '$\nx')
+  @parameterized.parameters(
+      '$x...', 'foo + $x...', 'import $x...', '$x... "$y..."', '$x... = 0'
+  )
+  def test_repeating_pattern(self, pattern):
+    tokenized, [], [metavar_i] = python_pattern.token_pattern(pattern)
+    # token text is 'x' -- that's the only variable in the pattern.
+    self.assertEqual(tokenized[metavar_i][1], 'x')
+    # it round trips to the same string except $x... -> x
+    self.assertEqual(
+        tokenize.untokenize(tokenized), pattern.replace('$x...', 'x')
+    )
+
+  @parameterized.parameters(
+      '$...', 'foo + $...', 'import $...', '$... "$..."', '$... = 0'
+  )
+  def test_anonymous_repeating_pattern(self, pattern):
+    tokenized, [], [metavar_i] = python_pattern.token_pattern(pattern)
+    # token text is '_' -- that's the only variable in the pattern.
+    self.assertEqual(tokenized[metavar_i][1], '_')
+    # it round trips to the same string except $... -> _
+    self.assertEqual(
+        tokenize.untokenize(tokenized), pattern.replace('$...', '_', 1)
+    )
+
+  @parameterized.parameters(
+      '$1', '$', '$\n', '$[', '$""', '$ x', '$\nx', '$ ...'
+  )
   def test_syntax_error(self, pattern):
     with self.assertRaises(SyntaxError):
       python_pattern.token_pattern(pattern)

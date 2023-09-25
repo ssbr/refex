@@ -103,10 +103,6 @@ High Level Syntax Matchers
 
 # pylint: disable=g-classes-have-attributes
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import abc
 import ast
 import inspect
@@ -125,34 +121,38 @@ from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
 
 
-def _remap_macro_variables(pattern: str) -> tuple[str, dict[str, str], set[str]]:
+def _remap_macro_variables(pattern: str) -> tuple[str, dict[str, str], set[str], set[str],
+]:
   """Renames the variables from the source pattern to give valid Python.
 
   Args:
-    pattern: A source pattern containing metavariables like "$foo".
+    pattern: A source pattern containing metavariables like ``$foo``, or
+        repeating metavariables like ``$foo...``
 
   Returns:
-    (remapped_source, variables, anonymous_variables)
+    (remapped_source, variables, anonymous_variables, repeating)
     * remapped_source is the pattern, but with all dollar-prefixed variables
       replaced with unique non-dollar-prefixed versions.
     * variables is the mapping of the original name to the remapped name.
     * anonymous_variables is a set of remapped names that came from `_`.
+    * repeating is the set of remapped-names which are defined to repeat many times.
 
   Raises:
     SyntaxError: The pattern can't be parsed.
   """
-  remapped_tokens, metavar_indices = python_pattern.token_pattern(pattern)
+  remapped_tokens, metavar_indices, repeating_metavar_indices = python_pattern.token_pattern(pattern)
   taken_tokens = {
-      token[1]
+      token.string
       for i, token in enumerate(remapped_tokens)
       if i not in metavar_indices
   }
   original_to_unique = {}
   anonymous_unique = set()
+  repeating_unique = set()
 
-  for metavar_index in metavar_indices:
-    metavar_token = list(remapped_tokens[metavar_index])
-    variable = metavar_token[1]
+  for metavar_index in itertools.chain(metavar_indices, repeating_metavar_indices):
+    metavar_token = remapped_tokens[metavar_index]
+    variable = metavar_token.string
 
     if variable in original_to_unique:
       remapped_name = original_to_unique[variable]
@@ -175,23 +175,26 @@ def _remap_macro_variables(pattern: str) -> tuple[str, dict[str, str], set[str]]
           else:
             original_to_unique[variable] = remapped_name
           break
-    metavar_token[1] = remapped_name
-    remapped_tokens[metavar_index] = tuple(metavar_token)
+    metavar_token = metavar_token._replace(string=remapped_name)
+    remapped_tokens[metavar_index] = metavar_token
+    if metavar_index in repeating_metavar_indices:
+      repeating_unique.add(remapped_name)
 
   return (
       tokenize.untokenize(remapped_tokens),
       original_to_unique,
       anonymous_unique,
+      repeating_unique,
   )
 
 
-def _rewrite_submatchers(pattern, restrictions):
+def _rewrite_submatchers(pattern: str, restrictions: dict[str, matcher.Matcher]):
   """Rewrites pattern/restrictions to erase metasyntactic variables.
 
   Args:
     pattern: a pattern containing $variables.
     restrictions: a dictionary of variables to submatchers. If a variable is
-      missing, Anything() is used instead.
+      not specified, Anything() is used instead.
 
   Returns:
     (remapped_pattern, variables, new_submatchers)
@@ -200,22 +203,33 @@ def _rewrite_submatchers(pattern, restrictions):
     * variables is the mapping of the original name to the remapped name.
     * new_submatchers is a dict from remapped names to submatchers. Every
       non-anonymous variable is put in a Bind() node, which has a submatcher
-      taken from `restrictions`.
+      taken from ``restrictions``.
+      Repeated anonymous wildcards use ``GlobStar()``.
 
   Raises:
     KeyError: if restrictions has a key that isn't a variable name.
   """
-  pattern, variables, anonymous_remapped = _remap_macro_variables(pattern)
+  pattern, variables, anonymous_remapped, repeating_remapped = _remap_macro_variables(pattern)
   incorrect_variables = set(restrictions) - set(variables)
   if incorrect_variables:
     raise KeyError('Some variables specified in restrictions were missing. '
                    'Did you misplace a "$"? Missing variables: %r' %
                    incorrect_variables)
 
-  submatchers = {
-      new_name: base_matchers.Anything() for new_name in anonymous_remapped
-  }
+  submatchers = {}
+  for new_name in anonymous_remapped:
+    if new_name in repeating_remapped:
+      m = base_matchers.GlobStar()
+    else:
+      m = base_matchers.Anything()
+    submatchers[new_name] = m
+
   for old_name, new_name in variables.items():
+    if new_name in repeating_remapped:
+      raise ValueError(
+          'Repeated variables are not supported:'
+          ' use `$...` (unnamed repeated wildcard)'
+          f' instead of named `${old_name}...`.')
     submatchers[new_name] = base_matchers.Bind(
         old_name,
         restrictions.get(old_name, base_matchers.Anything()),
@@ -286,21 +300,24 @@ def _ast_pattern(tree, variables):
   # but does that even happen IRL?
   # TODO: use a stack.
   if isinstance(tree, list):
-    return base_matchers.ItemsAre([_ast_pattern(e, variables) for e in tree])
+    return base_matchers.Glob([_ast_pattern(e, variables) for e in tree])
   if not isinstance(tree, ast.AST):
     # e.g. the identifier for an ast.Name.
     return base_matchers.Equals(tree)
   if isinstance(tree, ast.Name):
     if tree.id in variables:
       return variables[tree.id]
-  return getattr(ast_matchers,
-                 type(tree).__name__)(
-                     **{
-                         field: _ast_pattern(getattr(tree, field), variables)
-                         for field in type(tree)._fields
-                         # Filter out variable ctx.
-                         if field != 'ctx' or not isinstance(tree, ast.Name)
-                     })
+  kwargs = {
+      field: _ast_pattern(getattr(tree, field), variables)
+      for field in type(tree)._fields
+      # Filter out variable ctx.
+      if field != 'ctx' or not isinstance(tree, ast.Name)
+  }
+  class_name = type(tree).__name__
+  for attr, value in kwargs.items():
+    if isinstance(value, base_matchers.GlobStar):
+      raise TypeError(f'Cannot use a `$...` in `{class_name}.{attr}`.')
+  return getattr(ast_matchers, class_name)(**kwargs)
 
 
 def _verify_variables(tree, variables):
