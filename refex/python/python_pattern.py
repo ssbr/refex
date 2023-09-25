@@ -25,32 +25,52 @@ import tokenize
 
 _VARIABLE_REGEX = re.compile(r'\A[a-zA-Z_][a-zA-Z0-9_]*\Z')
 
-# TODO: replace tuple token manipulation with namedtuple manipulation,
-# when we can be Python3-only, in this and its callers.
-# For example:
-#   Py2: print(tok[1])
-#        tok = list(tok); tok[1] = ''; tok = tuple(tok)
-#   Py3: print(tok.string)
-#        tok = tok._replace(string='')
 
-
-def token_pattern(pattern):
+def token_pattern(
+    pattern: str,
+) -> tuple[list[tokenize.TokenInfo], set[int], set[int]]:
   """Tokenizes a source pattern containing metavariables like "$foo".
+
+  The following special forms are accepted:
+
+  * Matches anything once, binding to the name ``foo``: ``$foo``.
+  * Matches anything ``n`` times, binding to the name ``bars``: ``$bars...``.
+  * Matches anything ``n`` times, binding to the name ``_``: ``$...``.
+
+  (The repeated matching syntax makes the assumption that there's no useful
+  place in _Python_ for an identifier to be followed directly by a ``...``. If,
+  one day, Python allows an identifier directly followed by a ``...``, this is
+  possible to handle by extending the pattern syntax to match this via e.g.
+  ``${x}...`` vs ``${x...}``. However, this would not be a desirable state of
+  affairs.)
 
   Args:
     pattern: A Python source pattern.
 
   Returns:
-    (tokenized, metavar_indices).
+    (tokenized, nonrepeating_metavar_indices, repeating_metavar_indices).
     tokenized:
       A list of source tokens, omitting the metavariable marker ($).
-    metavar_indices:
-      A set of token indexes. tokenized[i] is a metavariable token if and only
-      if i is in metavar_indices.
+    nonrepeating_metavar_indices:
+      A set of token indexes. tokenized[i] is a nonrepeating metavariable token
+      if and only if i is in nonrepeating_metavar_indices.
+    repeating_metavar_indices:
+      A set of token indexes. tokenized[i] is a repeating metavariable token
+      if and only if i is in repeating_metavar_indices.
 
   Raises:
     SyntaxError: The pattern can't be parsed.
   """
+  # A note on column spans:
+  #
+  # untokenize() uses the gap between the end_col of the last token and the
+  # start_col of the next token to decide how many spaces to put -- there is no
+  # "space token". As a result, if we do nothing, in the expression `$x...`,
+  # the `$` and the `...` will each be filled with spaces when the `$` and `...`
+  # tokens are removed, even if `x` is replaced with a long token string such
+  # as `foooooo`. To prevent this, we must mutate the start/end cols, resulting
+  # in tokens with a string value shorter than the col span.
+
   # Work around Python 3.6.7's newline requirement.  See b/118359498.
   if pattern.endswith('\n'):
     added_newline = False
@@ -61,14 +81,30 @@ def token_pattern(pattern):
   try:
     tokens = list(tokenize.generate_tokens(io.StringIO(pattern).readline))
   except tokenize.TokenError as e:
-    raise SyntaxError("Couldn't tokenize %r: %s" % (pattern, e))
+    raise SyntaxError("Couldn't tokenize %r: %s" % (pattern, e)) from None
 
   retokenized = []
-  metavar_indices = set()
+  nonrepeating_metavar_indices = set()
+  repeating_metavar_indices = set()
 
   tokens_it = iter(tokens)
   for tok in tokens_it:
-    if tok[1] != '$':
+    if tok[1] == '...':
+      # If the last token was a nonrepeating variable, upgrade it to repeating.
+      # otherwise, add `...`.
+      last_token_index = len(retokenized) - 1
+      if last_token_index in nonrepeating_metavar_indices:
+        last_token = retokenized[last_token_index]
+        if last_token.end != tok.start:
+          raise SyntaxError(
+              f'No spaces allowed between metavariable and `...`: {pattern!r}'
+          )
+        retokenized[last_token_index] = last_token._replace(end=tok.end)
+        nonrepeating_metavar_indices.remove(last_token_index)
+        repeating_metavar_indices.add(last_token_index)
+      else:
+        retokenized.append(tok)
+    elif tok[1] != '$':
       # Just a note: in the presence of errors, even whitespace gets added as
       # error tokens, so we're including that here on purpose.
       retokenized.append(tok)
@@ -79,32 +115,32 @@ def token_pattern(pattern):
       except StopIteration:
         # This should never happen, because we get an ENDMARKER token.
         # But who knows, the token stream may change in the future.
-        raise SyntaxError('Expected variable after $, got EOF')
-      variable = variable_token[1]
-      if not _VARIABLE_REGEX.match(variable):
+        raise SyntaxError('Expected variable after $, got EOF') from None
+      if variable_token.string == '...':
+        is_repeated = True
+        variable_token = variable_token._replace(string='_')
+      elif _VARIABLE_REGEX.match(variable_token.string):
+        is_repeated = False
+      else:
         raise SyntaxError(
-            "Expected variable after $, but next token (%r) didn't match %s" %
-            (variable, _VARIABLE_REGEX.pattern))
+            'Expected variable name or ``...`` after $, but next token'
+            f" {variable_token.string!r} wasn't /{_VARIABLE_REGEX.pattern}/"
+            ' or ...'
+        )
 
-      start_row, start_col = variable_token[2]
-      # untokenize() uses the gap between the end_col of the last token and the
-      # start_col of this token to decide how many spaces to put -- there is no
-      # "space token". As a result, if we do nothing, the place where the "$"
-      # was will become a space. This is usually fine, but causes phantom
-      # indents and syntax errors if the $ was the first character on the line.
-      # e.g. it could not even parse the simple expression "$foo"
-      # To avoid this, we must remove 1 from start_col to make up for it.
-      if tok[2][1] != start_col - 1:
-        # newlines get a NL token, so we only need to worry about columns.
-        raise SyntaxError('No spaces allowed between $ and variable name: %r' %
-                          pattern)
-      variable_token_mut = list(variable_token)
-      variable_token_mut[2] = (start_row, start_col - 1)
-      metavar_indices.add(len(retokenized))
-      retokenized.append(tuple(variable_token_mut))
+      if tok.end != variable_token.start:
+        raise SyntaxError(
+            f'No spaces allowed between $ and next token: {pattern!r}'
+        )
+      variable_token = variable_token._replace(start=tok.start)
+      if is_repeated:
+        repeating_metavar_indices.add(len(retokenized))
+      else:
+        nonrepeating_metavar_indices.add(len(retokenized))
+      retokenized.append(variable_token)
 
   # Undo damage required to work around Python 3.6.7's newline requirement
   # See b/118359498 for details.
   if added_newline and len(retokenized) >= 2 and retokenized[-2][1] == '\n':
     del retokenized[-2]
-  return retokenized, metavar_indices
+  return retokenized, nonrepeating_metavar_indices, repeating_metavar_indices
