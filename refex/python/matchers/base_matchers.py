@@ -125,15 +125,17 @@ class TestOnlyRaise(matcher.Matcher):
     raise TestOnlyRaisedError(self.message)
 
 
-@attr.s(init=False, frozen=True)
+@attr.s(frozen=True)
 class _NAryMatcher(matcher.Matcher):
   """Base class for matchers which take arbitrarily many submatchers in init."""
 
   _matchers = matcher.submatcher_list_attrib()
 
+
+# override __init__ to take *args
+class _NAryMatcher(_NAryMatcher):
   def __init__(self, *matchers):
-    super(_NAryMatcher, self).__init__()
-    self.__dict__['_matchers'] = matchers
+    super().__init__(matchers)
 
 
 @matcher.safe_to_eval
@@ -781,11 +783,14 @@ class InLines(matcher.Matcher):
 # bindings -- you can't add a bound GlobStar() :(
 # @matcher.safe_to_eval
 @attr.s(frozen=True)
-class GlobStar(matcher.Matcher):
+class GlobStar(matcher.ContextualMatcher):
   """Matches any sequence of items in a sequence.
 
-  Only valid within :class:`Glob`.
+  Only valid within special matchers like :class:`Glob`.
   """
+
+  def __str__(self):
+    return '$...'
 
   def _match(self, context, candidate):
     del context, candidate  # unused
@@ -827,7 +832,7 @@ class Glob(matcher.Matcher):
   class:`GlobStar()` is only valid directly within the body of a `Glob`.
   """
 
-  _matchers = matcher.submatcher_list_attrib()
+  _matchers = matcher.submatcher_list_attrib(contextual=GlobStar)
 
   @cached_property.cached_property
   def _blocked_matchers(self):

@@ -685,10 +685,15 @@ class RecursivelyWrappedTest(matcher_test_util.MatcherTestCase,
     self.assertEqual(
         repr(
             base_matchers.RecursivelyWrapped(
-                ast_matchers.Num(), lambda i: ast_matchers.UnaryOp(
-                    op=ast_matchers.Invert(), operand=i))),
-        'RecursivelyWrapped(_matchers=(Num(n=Anything()),'
-        ' UnaryOp(op=Invert(), operand=_Recurse(...))))')
+                ast_matchers.Num(),
+                lambda i: ast_matchers.UnaryOp(
+                    op=ast_matchers.Invert(), operand=i
+                ),
+            )
+        ),
+        'RecursivelyWrapped(_matchers=[Num(n=Anything()),'
+        ' UnaryOp(op=Invert(), operand=_Recurse(...))])',
+    )
 
   def test_recursive_bindings(self):
     """Recursive matchers cover both recursive/base cases in .bind_variables.
@@ -755,6 +760,13 @@ class InLineTest(matcher_test_util.MatcherTestCase):
 
 
 class GlobTest(parameterized.TestCase):
+
+  def test_globstar_in_bad_location(self):
+    with self.assertRaises(TypeError) as cm:
+      base_matchers.AllOf(base_matchers.GlobStar())
+    self.assertIn(
+        'Cannot use a `$...` in `AllOf._matchers`.', str(cm.exception)
+    )
 
   @parameterized.parameters(['abc'], [['a', 'b', 'c']])
   def test_sequence(self, abc_seq):
