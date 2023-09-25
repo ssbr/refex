@@ -768,8 +768,30 @@ class MainTest(MainTestBase):
             ['--mode=%s' % mode, '$x', '--sub=$y+$z', os.devnull])
         self.assertEqual(
             message,
-            'The substitution template(s) referenced variables not matched in the Python matcher: `y`, `z`'
+            'The substitution template(s) referenced variables not matched in'
+            ' the Python matcher: `y`, `z`',
         )
+
+  @parameterized.parameters(
+      '[$..., 3, $...]',
+      '[*$..., 3, *$...]',
+      '[$..., 5]',
+      '[1, $...]',
+      '[$..., 1, $..., 2, $..., 3, $..., 4, $..., 5, $...]',
+  )
+  def test_py_ez_sub_glob_list(self, pattern):
+    for mode in ['py.expr', 'py.stmt']:
+      with self.subTest(mode=mode):
+        f = self.create_tempfile(content='[1, 2, 3, 4, 5]\n')
+
+        self.main([
+            '--mode=%s' % mode,
+            pattern,
+            '--sub=good',
+            '-i',
+            f.full_path,
+        ])
+        self.assertEqual(f.read_text(), 'good\n')
 
   @parameterized.parameters(
       # Statement fragments can't be reparsed.
@@ -782,7 +804,8 @@ class MainTest(MainTestBase):
       # and 'bar', two valid lines.
       # But '(foo\n,bar)' and '(foo,\n bar)' can't parse as two expressions,
       # only as one expression.
-      '(foo,\n bar)')
+      '(foo,\n bar)',
+  )
   def test_py_ez_sub_bad_reparse(self, source):
     """Substitution works for suite statements and other parser edge cases."""
     f = self.create_tempfile(content=source)

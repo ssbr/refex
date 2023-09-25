@@ -206,3 +206,33 @@ if sys.version_info >= (3, 8):
                              (type(...),))
 
     type_filter = frozenset({ast.Constant})
+
+
+#####################################
+# High level AST matching overrides #
+#####################################
+
+# Firstly, a `*$...` is always equivalent to a `$...`.
+
+_old_starred = Starred  # pylint: disable=undefined-variable
+
+
+def Starred(**kw):  # pylint: disable=invalid-name
+  value = kw.get('value')
+  if isinstance(value, base_matchers.GlobStar):
+    return value
+  return _old_starred(**kw)
+
+
+# Similarly, a `**$...` is always morally-equivalent to a `$...=$...` in a call.
+# (But the latter isn't valid syntax atm, so this is the only way to spell it.)
+
+_old_keyword = keyword  # pylint: disable=undefined-variable
+
+
+def keyword(**kw):
+  value = kw.get('value')
+  arg = kw.get('arg')
+  if arg == base_matchers.Equals(None) and isinstance(value, base_matchers.GlobStar):
+    return value
+  return _old_keyword(**kw)
