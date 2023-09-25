@@ -125,17 +125,18 @@ from refex.python.matchers import ast_matchers
 from refex.python.matchers import base_matchers
 
 
-def _remap_macro_variables(pattern):
+def _remap_macro_variables(pattern: str) -> tuple[str, dict[str, str], set[str]]:
   """Renames the variables from the source pattern to give valid Python.
 
   Args:
     pattern: A source pattern containing metavariables like "$foo".
 
   Returns:
-    (remapped_source, variables)
+    (remapped_source, variables, anonymous_variables)
     * remapped_source is the pattern, but with all dollar-prefixed variables
       replaced with unique non-dollar-prefixed versions.
     * variables is the mapping of the original name to the remapped name.
+    * anonymous_variables is a set of remapped names that came from `_`.
 
   Raises:
     SyntaxError: The pattern can't be parsed.
@@ -147,6 +148,7 @@ def _remap_macro_variables(pattern):
       if i not in metavar_indices
   }
   original_to_unique = {}
+  anonymous_unique = set()
 
   for metavar_index in metavar_indices:
     metavar_token = list(remapped_tokens[metavar_index])
@@ -168,12 +170,19 @@ def _remap_macro_variables(pattern):
         remapped_name = 'gensym%s_%s' % (suffix, variable)
         if remapped_name not in taken_tokens:
           taken_tokens.add(remapped_name)
-          original_to_unique[variable] = remapped_name
+          if variable == '_':
+            anonymous_unique.add(remapped_name)
+          else:
+            original_to_unique[variable] = remapped_name
           break
     metavar_token[1] = remapped_name
     remapped_tokens[metavar_index] = tuple(metavar_token)
 
-  return tokenize.untokenize(remapped_tokens), original_to_unique
+  return (
+      tokenize.untokenize(remapped_tokens),
+      original_to_unique,
+      anonymous_unique,
+  )
 
 
 def _rewrite_submatchers(pattern, restrictions):
@@ -190,20 +199,22 @@ def _rewrite_submatchers(pattern, restrictions):
       valid Python syntax.
     * variables is the mapping of the original name to the remapped name.
     * new_submatchers is a dict from remapped names to submatchers. Every
-      variable is put in a Bind() node, which has a submatcher taken from
-      `restrictions`.
+      non-anonymous variable is put in a Bind() node, which has a submatcher
+      taken from `restrictions`.
 
   Raises:
     KeyError: if restrictions has a key that isn't a variable name.
   """
-  pattern, variables = _remap_macro_variables(pattern)
+  pattern, variables, anonymous_remapped = _remap_macro_variables(pattern)
   incorrect_variables = set(restrictions) - set(variables)
   if incorrect_variables:
     raise KeyError('Some variables specified in restrictions were missing. '
                    'Did you misplace a "$"? Missing variables: %r' %
                    incorrect_variables)
 
-  submatchers = {}
+  submatchers = {
+      new_name: base_matchers.Anything() for new_name in anonymous_remapped
+  }
   for old_name, new_name in variables.items():
     submatchers[new_name] = base_matchers.Bind(
         old_name,

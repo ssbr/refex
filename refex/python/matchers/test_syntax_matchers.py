@@ -15,10 +15,6 @@
 # python3 python2
 """Tests for refex.python.matchers.syntax_matchers."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import textwrap
 import unittest
 from unittest import mock
@@ -59,21 +55,21 @@ class RemapMacroVariablesTest(absltest.TestCase):
 
   def test_identity(self):
     self.assertEqual(
-        syntax_matchers._remap_macro_variables('a + b'), ('a + b', {}))
+        syntax_matchers._remap_macro_variables('a + b'), ('a + b', {}, set())
+    )
 
   def test_remap(self):
     self.assertEqual(
-        syntax_matchers._remap_macro_variables('a + $b'), ('a + gensym_b', {
-            'b': 'gensym_b'
-        }))
+        syntax_matchers._remap_macro_variables('a + $b'),
+        ('a + gensym_b', {'b': 'gensym_b'}, set()),
+    )
 
   def test_remap_twice(self):
     # But why would you _do_ this?
     self.assertEqual(
         syntax_matchers._remap_macro_variables('gensym_b + $b'),
-        ('gensym_b + gensym0_b', {
-            'b': 'gensym0_b'
-        }))
+        ('gensym_b + gensym0_b', {'b': 'gensym0_b'}, set()),
+    )
 
   def test_remap_doesnt_eat_tokens(self):
     """Expanding the size of a variable mustn't eat into neighboring tokens."""
@@ -83,15 +79,16 @@ class RemapMacroVariablesTest(absltest.TestCase):
         # columns to regenerate where things should go:
         # 1) eating whitespace: 'gensym_ain b'
         # 2) leavint the $ empty and causing a pahton indent: ' gensym_a in b'
-        ('gensym_a in b', {
-            'a': 'gensym_a'
-        }))
+        ('gensym_a in b', {'a': 'gensym_a'}, set()),
+    )
 
   def test_remap_is_noninvasive(self):
     """Remapping is lexical and doesn't invade comments or strings."""
     for s in ('# $cash', '"$money"'):
       with self.subTest(s=s):
-        self.assertEqual(syntax_matchers._remap_macro_variables(s), (s, {}))
+        self.assertEqual(
+            syntax_matchers._remap_macro_variables(s), (s, {}, set())
+        )
 
 
 class ExprPatternTest(matcher_test_util.MatcherTestCase):
@@ -153,7 +150,21 @@ class ExprPatternTest(matcher_test_util.MatcherTestCase):
     expr = parsed.tree.body[0].value
     self.assertIsNone(
         syntax_matchers.ExprPattern('name').match(
-            matcher.MatchContext(parsed), expr))
+            matcher.MatchContext(parsed), expr
+        )
+    )
+
+  def test_anonymous_wildcard(self):
+    parsed = matcher.parse_ast('3', '<string>')
+    expr = parsed.tree.body[0].value
+    m = syntax_matchers.ExprPattern('$_').match(
+        matcher.MatchContext(parsed), expr
+    )
+    self.assertIsNotNone(m)
+    self.assertEqual(
+        m.bindings,
+        {},
+    )
 
   def test_variable_name(self):
     parsed = matcher.parse_ast('3', '<string>')
