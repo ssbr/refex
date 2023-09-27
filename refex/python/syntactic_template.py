@@ -69,7 +69,11 @@ class _LexicalTemplate:
   def __attrs_post_init__(self):
     # Because we have frozen=True, creating values for _tokens and _var_to_i
     # is a little complex, and requires invoking object.__setattr__.
-    tokenized, metavar_indices = python_pattern.token_pattern(self.template)
+    tokenized, metavar_indices, repeating_indices = (
+        python_pattern.token_pattern(self.template)
+    )
+    if repeating_indices:
+      raise ValueError('Repeated substitutions are not yet supported')
     var_to_i = {}
     for i in metavar_indices:
       var = tokenized[i][1]
