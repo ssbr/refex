@@ -203,74 +203,6 @@ def register_constant(name: str, constant: Any):
   registered_constants[name] = constant
 
 
-def coerce(value):  # Nobody uses coerce. pylint: disable=redefined-builtin
-  """Returns the 'intended' matcher given by `value`.
-
-  If `value` is already a matcher, then this is what is returned.
-
-  If `value` is anything else, then coerce returns `ImplicitEquals(value)`.
-
-  Args:
-    value: Either a Matcher, or a value to compare for equality.
-  """
-  if isinstance(value, Matcher):
-    return value
-  else:
-    return ImplicitEquals(value)
-
-
-def _coerce_list(values):
-  return [coerce(v) for v in values]
-
-
-# TODO(b/199577701): drop the **kwargs: Any in the *_attrib functions.
-
-_IS_SUBMATCHER_ATTRIB = __name__ + '._IS_SUBMATCHER_ATTRIB'
-_IS_SUBMATCHER_LIST_ATTRIB = __name__ + '._IS_SUBMATCHER_LIST_ATTRIB'
-
-
-def submatcher_attrib(*args, walk: bool = True, **kwargs: Any):
-  """Creates an attr.ib that is marked as a submatcher.
-
-  This will cause the matcher to be automatically walked as part of the
-  computation of .bind_variables. Any submatcher that can introduce a binding
-  must be listed as a submatcher_attrib or submatcher_list_attrib.
-
-  Args:
-    *args: Forwarded to attr.ib.
-    walk: Whether or not to walk to accumulate .bind_variables.
-    **kwargs: Forwarded to attr.ib.
-
-  Returns:
-    An attr.ib()
-  """
-  if walk:
-    kwargs.setdefault('metadata', {})[_IS_SUBMATCHER_ATTRIB] = True
-  kwargs.setdefault('converter', coerce)
-  return attr.ib(*args, **kwargs)
-
-
-def submatcher_list_attrib(*args, walk: bool = True, **kwargs: Any):
-  """Creates an attr.ib that is marked as an iterable of submatchers.
-
-  This will cause the matcher to be automatically walked as part of the
-  computation of .bind_variables. Any submatcher that can introduce a binding
-  must be listed as a submatcher_attrib or submatcher_list_attrib.
-
-  Args:
-    *args: Forwarded to attr.ib.
-    walk: Whether or not to walk to accumulate .bind_variables.
-    **kwargs: Forwarded to attr.ib.
-
-  Returns:
-    An attr.ib()
-  """
-  if walk:
-    kwargs.setdefault('metadata', {})[_IS_SUBMATCHER_LIST_ATTRIB] = True
-  kwargs.setdefault('converter', _coerce_list)
-  return attr.ib(*args, **kwargs)
-
-
 # TODO: make MatchObject, MatchInfo, and Matcher generic, parameterized
 # by match type. Since pytype doesn't support generics yet, that's not an
 # option, but it'd greatly clarify the API by allowing us to classify matchers
@@ -921,6 +853,16 @@ class Matcher(metaclass=abc.ABCMeta):
   type_filter = None
 
 
+class ContextualMatcher(Matcher):
+  """A matcher which requires special understanding in context.
+
+  By default, contextual matchers are not allowed inside of a submatcher
+  attribute.
+  To allow one, specify, for instance,
+  ``submatcher_attrib(contextual=MyContextualMatcher)``.
+  """
+
+  pass
 
 
 def accumulating_matcher(f):
@@ -1024,6 +966,106 @@ class ParseError(Exception):
   information about the error, location, etc., but does not include the
   filename.
   """
+
+
+def coerce(value):  # Nobody uses coerce. pylint: disable=redefined-builtin
+  """Returns the 'intended' matcher given by `value`.
+
+  If `value` is already a matcher, then this is what is returned.
+
+  If `value` is anything else, then coerce returns `ImplicitEquals(value)`.
+
+  Args:
+    value: Either a Matcher, or a value to compare for equality.
+  """
+  if isinstance(value, Matcher):
+    return value
+  else:
+    return ImplicitEquals(value)
+
+
+def _coerce_list(values):
+  return [coerce(v) for v in values]
+
+
+# TODO(b/199577701): drop the **kwargs: Any in the *_attrib functions.
+
+_IS_SUBMATCHER_ATTRIB = __name__ + '._IS_SUBMATCHER_ATTRIB'
+_IS_SUBMATCHER_LIST_ATTRIB = __name__ + '._IS_SUBMATCHER_LIST_ATTRIB'
+
+
+def _submatcher_validator(old_validator, contextual):
+  def validator(o: object, attribute: attr.Attribute, m: Matcher):
+    if isinstance(m, ContextualMatcher) and not isinstance(m, contextual):
+      raise TypeError(
+          f'Cannot use a `{m}` in `{type(o).__name__}.{attribute.name}`.'
+      )
+    if old_validator is not None:
+      old_validator(o, attribute, m)
+
+  return validator
+
+
+def submatcher_attrib(
+    *args,
+    walk: bool = True,
+    contextual: type[ContextualMatcher]
+    | tuple[type[ContextualMatcher], ...] = (),
+    **kwargs: Any,
+):
+  """Creates an attr.ib that is marked as a submatcher.
+
+  This will cause the matcher to be automatically walked as part of the
+  computation of .bind_variables. Any submatcher that can introduce a binding
+  must be listed as a submatcher_attrib or submatcher_list_attrib.
+
+  Args:
+    *args: Forwarded to attr.ib.
+    walk: Whether or not to walk to accumulate .bind_variables.
+    contextual: The contextual matcher classes to allow, if any.
+    **kwargs: Forwarded to attr.ib.
+
+  Returns:
+    An attr.ib()
+  """
+  if walk:
+    kwargs.setdefault('metadata', {})[_IS_SUBMATCHER_ATTRIB] = True
+  kwargs.setdefault('converter', coerce)
+  kwargs['validator'] = _submatcher_validator(
+      kwargs.get('validator'), contextual
+  )
+  return attr.ib(*args, **kwargs)
+
+
+def submatcher_list_attrib(
+    *args,
+    walk: bool = True,
+    contextual: type[ContextualMatcher]
+    | tuple[type[ContextualMatcher], ...] = (),
+    **kwargs: Any,
+):
+  """Creates an attr.ib that is marked as an iterable of submatchers.
+
+  This will cause the matcher to be automatically walked as part of the
+  computation of .bind_variables. Any submatcher that can introduce a binding
+  must be listed as a submatcher_attrib or submatcher_list_attrib.
+
+  Args:
+    *args: Forwarded to attr.ib.
+    walk: Whether or not to walk to accumulate .bind_variables.
+    contextual: The contextual matcher classes to allow, if any.
+    **kwargs: Forwarded to attr.ib.
+
+  Returns:
+    An attr.ib()
+  """
+  if walk:
+    kwargs.setdefault('metadata', {})[_IS_SUBMATCHER_LIST_ATTRIB] = True
+  kwargs.setdefault('converter', _coerce_list)
+  kwargs['validator'] = attr.validators.deep_iterable(
+      _submatcher_validator(kwargs.get('validator'), contextual)
+  )
+  return attr.ib(*args, **kwargs)
 
 
 @attr.s(frozen=True)
