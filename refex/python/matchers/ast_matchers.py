@@ -206,3 +206,19 @@ if sys.version_info >= (3, 8):
                              (type(...),))
 
     type_filter = frozenset({ast.Constant})
+
+
+#####################################
+# High level AST matching overrides #
+#####################################
+
+# Firstly, a `*$...` is always equivalent to a `$...`.
+
+_old_starred = Starred  # pylint: disable=undefined-variable
+
+
+def Starred(**kw):  # pylint: disable=invalid-name
+  value = kw.get('value')
+  if isinstance(value, base_matchers.GlobStar):
+    return value
+  return _old_starred(**kw)
