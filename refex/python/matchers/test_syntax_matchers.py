@@ -55,20 +55,21 @@ class RemapMacroVariablesTest(absltest.TestCase):
 
   def test_identity(self):
     self.assertEqual(
-        syntax_matchers._remap_macro_variables('a + b'), ('a + b', {}, set())
+        syntax_matchers._remap_macro_variables('a + b'),
+        ('a + b', {}, set(), set()),
     )
 
   def test_remap(self):
     self.assertEqual(
         syntax_matchers._remap_macro_variables('a + $b'),
-        ('a + gensym_b', {'b': 'gensym_b'}, set()),
+        ('a + gensym_b', {'b': 'gensym_b'}, set(), set()),
     )
 
   def test_remap_twice(self):
     # But why would you _do_ this?
     self.assertEqual(
         syntax_matchers._remap_macro_variables('gensym_b + $b'),
-        ('gensym_b + gensym0_b', {'b': 'gensym0_b'}, set()),
+        ('gensym_b + gensym0_b', {'b': 'gensym0_b'}, set(), set()),
     )
 
   def test_remap_doesnt_eat_tokens(self):
@@ -79,7 +80,7 @@ class RemapMacroVariablesTest(absltest.TestCase):
         # columns to regenerate where things should go:
         # 1) eating whitespace: 'gensym_ain b'
         # 2) leavint the $ empty and causing a pahton indent: ' gensym_a in b'
-        ('gensym_a in b', {'a': 'gensym_a'}, set()),
+        ('gensym_a in b', {'a': 'gensym_a'}, set(), set()),
     )
 
   def test_remap_is_noninvasive(self):
@@ -87,7 +88,7 @@ class RemapMacroVariablesTest(absltest.TestCase):
     for s in ('# $cash', '"$money"'):
       with self.subTest(s=s):
         self.assertEqual(
-            syntax_matchers._remap_macro_variables(s), (s, {}, set())
+            syntax_matchers._remap_macro_variables(s), (s, {}, set(), set())
         )
 
 
@@ -196,7 +197,7 @@ class ExprPatternTest(matcher_test_util.MatcherTestCase):
     self.assertIsNotNone(m.match(matcher.MatchContext(parsed), expr_match))
     self.assertIsNone(m.match(matcher.MatchContext(parsed), expr_nomatch))
 
-  def test_repeated_variable(self):
+  def test_reused_variable(self):
     self.assertEqual(
         self.get_all_match_strings(
             syntax_matchers.ExprPattern('$x + $x'),
@@ -216,6 +217,27 @@ class ExprPatternTest(matcher_test_util.MatcherTestCase):
             base_matchers.AllOf(
                 syntax_matchers.ExprPattern('$x'), base_matchers.Bind('x')),
             '1'), ['1'])
+
+  def test_repeated_wildcard_in_bad_location(self):
+    with self.assertRaises(TypeError) as cm:
+      syntax_matchers.ExprPattern('$... + 3')
+    self.assertIn('Cannot use a `$...` in `BinOp.left`.', str(cm.exception))
+
+  def test_bad_dict_glob(self):
+    """Tests separated globbing of keys and values.
+
+    Under the hood, the AST is separate for keys and values, but
+    this is almost an implementation detail -- not every AST would do this --
+    and definitely surprising.
+
+    We should, for the purpose of globs, pretend it's a list of pairs.
+    """
+
+    parsed = matcher.parse_ast('{key1: value1, key2: value2}', '<string>')
+    expr = parsed.tree.body[0].value
+    m = syntax_matchers.ExprPattern('{$...:$..., key1:value2, $...:$...}')
+    # TODO(b/301637225): This shouldn't match.
+    self.assertIsNotNone(m.match(_FAKE_CONTEXT, expr))
 
 
 class StmtPatternTest(matcher_test_util.MatcherTestCase):
