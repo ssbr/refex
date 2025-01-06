@@ -73,13 +73,13 @@ import itertools
 import operator
 import sre_parse
 import string
+import sys
 from typing import (Any, Dict, Iterable, Iterator, Mapping, Optional, Set, Text,
                     Tuple)
 
 import attr
 import cached_property
 import colorama
-
 from refex import match as _match
 from refex import parsed_file
 from refex import substitution
@@ -438,24 +438,39 @@ class Renderer:
     return ''.join(rendered)
 
 
-class _IdDict:
+@attr.s
+class _VarDict:
+  """A dict-like object for mapping variables to newly-crafted negative indexes."""
 
-  def __getitem__(self, label):
-    return label
+  var_to_index = attr.ib(factory=dict)
+  _next_index = attr.ib(default=-1)
+
+  def __getitem__(self, var: str | int):
+    if var in self.var_to_index:
+      return self.var_to_index[var]
+    else:
+      index = self._next_index
+      self.var_to_index[var] = index
+      self._next_index -= 1
+      return index
+
+
+@attr.s(frozen=True)
+class _Var:
+  label = attr.ib(type=str)
 
 
 @functools.total_ordering
 class _AlwaysGreater:
-
   def __gt__(self, other):
     del other  # unused
     return True
-
   def __eq__(self, other):
     return False
 
 
-class _IdPattern:
+@attr.s
+class _FakePattern:
   r"""Hacky fake pattern object to get around the fact that we don't have one.
 
   sre_parse expects an existing compiled regexp in order to parse. In
@@ -471,8 +486,42 @@ class _IdPattern:
   """
   # TODO: maybe give it a real pattern object for --py patterns, or else
   # restrict use of regex templates to just --mode=re.
-  groupindex = _IdDict()
-  groups = _AlwaysGreater()
+  groupindex = attr.ib(factory=_VarDict)
+  groups = attr.ib(default=_AlwaysGreater())
+
+
+def _parse_re_template(
+    template: str | bytes,
+) -> tuple[list[str | bytes | int], dict[int, int | str | bytes]]:
+  """Parses a regex template.
+
+  Args:
+    template: The regular expression template to parse.
+
+  Returns:
+    The expanded template (a list of strings and group indexes), and a list of
+    variables.
+  """
+  pattern = _FakePattern()
+  if sys.version_info >= (3, 12):
+    expanded_template = sre_parse.parse_template(template, pattern)
+  else:
+    # In Python 3.11 and below, parse_template used `None` in each location of
+    # the template that was a group reference, and separately had a list of
+    # (index_which_is_none, group_for_that_undex). We postprocess this into the
+    # python 3.12 format for compatibility.
+    fillers, expanded_template = sre_parse.parse_template(template, pattern)
+    for i, group in fillers:
+      assert expanded_template[i] is None
+      expanded_template[i] = group
+    assert None not in expanded_template
+
+  var_to_index = pattern.groupindex.var_to_index
+  for i in expanded_template:
+    if isinstance(i, int) and i >= 0:
+      var_to_index[i] = i
+
+  return expanded_template, {index: var for var, index in var_to_index.items()}
 
 
 class Template(metaclass=abc.ABCMeta):
@@ -571,23 +620,26 @@ class RegexTemplate(Template):
       repr=False,
       init=False,
       default=attr.Factory(
-          lambda self: sre_parse.parse_template(self.template, _IdPattern),  # pytype: disable=wrong-arg-types
-          takes_self=True))
+          lambda self: _parse_re_template(self.template),
+          takes_self=True,
+      ),
+  )
 
   def substitute_match(self, parsed, match, matches):
     del match  # unused
     mapping = stringify_matches(matches)
     empty_string = self.template[0:0]  # bytes/unicode compatibility hack.
-    fillers, spaces = self._template
-    spaces = list(spaces)
-    for target, source in fillers:
-      spaces[target] = mapping[source]
-    return empty_string.join(spaces)
+    expanded_template, index_to_var = self._template
+    expanded_template = list(expanded_template)
+    for i, s in enumerate(expanded_template):
+      if isinstance(s, int):
+        expanded_template[i] = mapping[index_to_var[s]]
+    return empty_string.join(expanded_template)
 
   @cached_property.cached_property
   def variables(self):
-    fillers, _ = self._template
-    return frozenset(source for _, source in fillers)
+    _, index_to_var = self._template
+    return frozenset(index_to_var.values())
 
 
 def rewrite_templates(parsed, matches, templates):
