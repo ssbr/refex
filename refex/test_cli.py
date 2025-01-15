@@ -465,7 +465,7 @@ class MainTest(MainTestBase):
     # TODO: Get sub --color working in environments without recent diff
     # binary.
     # This is ridiculous!
-    # self.assertRegexpMatches(output,
+    # self.assertRegex(output,
     # r'.+-xx xyzzy xx.+\n.+\+xx QUUX xx.+\n')
 
   def test_sub_inplace(self):
@@ -1015,7 +1015,7 @@ class MainTest(MainTestBase):
 
     # devinj): Get sub --color working even without recent diff binary.
     # This is ridiculous!
-    # self.assertRegexpMatches(output,
+    # self.assertRegex(output,
     # r'.+-x = foo\(\).+\n.+\+x = foo2\(\).+\n')
 
 
@@ -1152,7 +1152,7 @@ class FixTest(MainTestBase):
 
   def test_assert_multirewrite(self):
     # "assert_(a is None)" -> "assertTrue(a is None)" -> "assertIs(a, None)"
-    self.assert_fixes('self.assert_(a is None)', 'self.assertIs(a, None)')
+    self.assert_fixes('self.assertTrue(a is None)', 'self.assertIs(a, None)')
 
   def test_attrib_mutable_default(self):
     self.assert_fixes('attr.ib(default=[])', 'attr.ib(factory=list)')
