@@ -81,14 +81,29 @@ def Eval(s, callables=None, constants=None):
   if isinstance(node, ast.Expression):
     node = node.body
 
-  ast_bytes = ast.Bytes if hasattr(ast, 'Bytes') else ast.Str
+  ast_strlike = ()
+  if not hasattr(ast, 'Constant'):
+    if hasattr(ast, 'Bytes'):
+      ast_strlike = (ast.Str, ast.Bytes)
+    else:
+      ast_strlike = (ast.Str,)
 
   def _Convert(node):
     """Convert the literal data in the node."""
-    if isinstance(node, (ast.Str, ast_bytes)):
-      return node.s
-    if isinstance(node, ast.Num):
-      return node.n
+    if hasattr(ast, 'Constant'):
+      # bool and None excluded; we resolve those through the constants map.
+      if (
+          isinstance(node, ast.Constant)
+          and not isinstance(node.value, bool)
+          and node.value is not None
+      ):
+        return node.value
+    else:
+      # 3.8+ deprecated Str/Bytes/Num in favour of Constant.
+      if isinstance(node, ast_strlike):
+        return node.s
+      if isinstance(node, ast.Num):
+        return node.n
     if isinstance(node, ast.UnaryOp):
       if isinstance(node.op, ast.USub) and isinstance(node.operand, ast.Num):
         return 0 - _Convert(node.operand)
@@ -125,7 +140,10 @@ def Eval(s, callables=None, constants=None):
     """Get the dotted name in the node."""
     if isinstance(node, ast.Name):
       return node.id
-    if hasattr(ast, 'NameConstant') and isinstance(node, ast.NameConstant):
+    if hasattr(ast, 'Constant') and isinstance(node, ast.Constant):
+      # True/False/None on Python 3.8+.
+      return str(node.value)
+    elif hasattr(ast, 'NameConstant') and isinstance(node, ast.NameConstant):
       # True/False/None on Python 3.
       return str(node.value)
     if isinstance(node, ast.Attribute):
