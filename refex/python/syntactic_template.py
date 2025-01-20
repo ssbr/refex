@@ -72,7 +72,7 @@ class _LexicalTemplate:
     tokenized, metavar_indices = python_pattern.token_pattern(self.template)
     var_to_i = {}
     for i in metavar_indices:
-      var = tokenized[i][1]
+      var = tokenized[i].string
       var_to_i.setdefault(var, []).append(i)
     object.__setattr__(self, '_tokens', tokenized)
     object.__setattr__(self, '_var_to_i', var_to_i)
@@ -108,9 +108,7 @@ class _LexicalTemplate:
         continue
       free_vars.remove(var)
       for i in all_i:
-        tok = list(tokens[i])
-        tok[1] = new
-        tokens[i] = tuple(tok)
+        tokens[i] = tokens[i]._replace(string=new)
     if free_vars:
       raise KeyError(next(iter(free_vars)))
     return tokenize.untokenize(tokens)

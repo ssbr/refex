@@ -143,7 +143,7 @@ def _remap_macro_variables(pattern: str) -> tuple[str, dict[str, str], set[str]]
   """
   remapped_tokens, metavar_indices = python_pattern.token_pattern(pattern)
   taken_tokens = {
-      token[1]
+      token.string
       for i, token in enumerate(remapped_tokens)
       if i not in metavar_indices
   }
@@ -151,8 +151,8 @@ def _remap_macro_variables(pattern: str) -> tuple[str, dict[str, str], set[str]]
   anonymous_unique = set()
 
   for metavar_index in metavar_indices:
-    metavar_token = list(remapped_tokens[metavar_index])
-    variable = metavar_token[1]
+    metavar_token = remapped_tokens[metavar_index]
+    variable = metavar_token.string
 
     if variable in original_to_unique:
       remapped_name = original_to_unique[variable]
@@ -175,8 +175,8 @@ def _remap_macro_variables(pattern: str) -> tuple[str, dict[str, str], set[str]]
           else:
             original_to_unique[variable] = remapped_name
           break
-    metavar_token[1] = remapped_name
-    remapped_tokens[metavar_index] = tuple(metavar_token)
+    remapped_tokens[metavar_index] = metavar_token._replace(
+        string=remapped_name)
 
   return (
       tokenize.untokenize(remapped_tokens),
