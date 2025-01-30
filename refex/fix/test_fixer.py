@@ -363,9 +363,13 @@ class DefaultFixerTest(absltest.TestCase):
     # Try to check that the return values are at least remotely similar.
     # Either the return values are equal (e.g. 1L == 1), or the types are the
     # same (eg. object() != object(), but we'd still like that case to pass.)
+
     self.assertTrue(
         lhs_result == rhs_result or type(lhs_result) == type(rhs_result),  # pylint: disable=unidiomatic-typecheck
-        '{!r} != {!r}'.format(lhs_result, rhs_result))
+        f'{lhs} != {rhs}\nmeaning:'
+        f' {lhs_result if lhs_e is None else lhs_e!r} !='
+        f' {rhs_result if rhs_e is None else rhs_e!r}',
+    )
     self.assertEqual(type(lhs_e), type(rhs_e))
     # Would like to assert similarity of the exception messages, but they can
     # include things like the mock id / address in memory.

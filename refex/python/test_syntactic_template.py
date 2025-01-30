@@ -27,7 +27,7 @@ from refex.python.matchers import base_matchers
 
 class LexicalTemplateTest(parameterized.TestCase):
 
-  @parameterized.parameters('', 'y', '"', '#')
+  @parameterized.parameters('', 'y', '""', '#')
   def test_substitute(self, replacement):
     """Tests substitutions, as either the template or a substituted-in variable."""
     for template in ['$x', replacement]:

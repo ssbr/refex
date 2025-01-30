@@ -73,7 +73,7 @@ def token_pattern(pattern):
       # error tokens, so we're including that here on purpose.
       retokenized.append(tok)
     else:
-      assert tok[0] == token.ERRORTOKEN
+      assert tok.type in (token.ERRORTOKEN, token.OP)
       try:
         variable_token = next(tokens_it)
       except StopIteration:

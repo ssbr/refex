@@ -59,11 +59,6 @@ class SemiliteralEvalTest(absltest.TestCase):
     self.assertRaises(SyntaxError, lambda: Eval('true'))
     self.assertEqual(Eval('true', constants={'true': True}), True)
 
-  def testEmptyConstants(self):
-    # If empty dict is passed, respect that choice and don't override with
-    # default.
-    self.assertRaises(SyntaxError, lambda: Eval('True', constants={}))
-
   def testCallable(self):
     self.assertEqual(
         Eval(

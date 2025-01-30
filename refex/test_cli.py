@@ -1102,15 +1102,14 @@ class FixTest(MainTestBase):
   def test_assert_not_equal(self):
     self.assert_fixes('self.assertTrue(a != b)', 'self.assertNotEqual(a, b)')
 
-
-#   def test_assert_is(self):
-#     self.assert_fixes('self.assertTrue(a is b)', 'self.assertIs(a, b)')
-#
-#   def test_assertis_not(self):
-#     self.assert_fixes('self.assertTrue(a is not b)', 'self.assertIsNot(a, b)')
-#
-#   def test_assert_not_is(self):
-#     self.assert_fixes('self.assertTrue(not a is b)', 'self.assertIsNot(a, b)')
+  #   def test_assert_is(self):
+  #     self.assert_fixes('self.assertTrue(a is b)', 'self.assertIs(a, b)')
+  #
+  #   def test_assertis_not(self):
+  #     self.assert_fixes('self.assertTrue(a is not b)', 'self.assertIsNot(a, b)')
+  #
+  #   def test_assert_not_is(self):
+  #     self.assert_fixes('self.assertTrue(not a is b)', 'self.assertIsNot(a, b)')
 
   def test_assert_in(self):
     self.assert_fixes('self.assertTrue(a in b)', 'self.assertIn(a, b)')
@@ -1151,8 +1150,11 @@ class FixTest(MainTestBase):
                       'self.assertIsInstance(a, b)')
 
   def test_assert_multirewrite(self):
-    # "assert_(a is None)" -> "assertTrue(a is None)" -> "assertIs(a, None)"
-    self.assert_fixes('self.assert_(a is None)', 'self.assertIs(a, None)')
+    # "assertTrue(a in [b for b in c])" -> "assertIn(a, [b for b in c])"
+    # -> "assertIn(a, list(c))"
+    self.assert_fixes(
+        'self.assertTrue(a in [b for b in c])', 'self.assertIn(a, list(c))'
+    )
 
   def test_attrib_mutable_default(self):
     self.assert_fixes('attr.ib(default=[])', 'attr.ib(factory=list)')

@@ -183,9 +183,7 @@ def is_safe_to_eval(cls):
 # Constants for the semiliteral_eval in evaluate.py
 # These will generally be enums and other constants that should be available
 # in order to call into matchers.
-registered_constants = {
-    u'None': None,
-}
+registered_constants = {}
 
 
 def register_enum(cls):
@@ -919,8 +917,6 @@ class Matcher(metaclass=abc.ABCMeta):
   #:
   #: None if any type is eligible for matching.
   type_filter = None
-
-
 
 
 def accumulating_matcher(f):

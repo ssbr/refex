@@ -52,16 +52,14 @@ def Eval(s, callables=None, constants=None):
   Args:
     s: a string
     callables: an optional dictionary mapping a dotted name to a function.  For
-        example, the dictionary {'set': set} will allow the evaluator to call
-          the 'set' function where it occurs in s.  If you use this, we
-          recommend you explicitly pass it as a keyword argument for readability
-          and to avoid confusion with 'constants'.  If not provided, defaults to
-          {}.
+      example, the dictionary {'set': set} will allow the evaluator to call the
+      'set' function where it occurs in s.  If you use this, we recommend you
+      explicitly pass it as a keyword argument for readability and to avoid
+      confusion with 'constants'.  If not provided, defaults to {}.
     constants: an optional dictionary mapping names to constant values.  If you
       use this, we recommend you explicitly pass it as a keyword argument for
-      readability and to avoid confusion with 'callables'.
-        If not provided, defaults to:
-        {'None': None, 'True': True, 'False': False}
+      readability and to avoid confusion with 'callables'. If not provided,
+      defaults to `{}`
 
   Returns:
     The evaluation of s.
@@ -73,7 +71,7 @@ def Eval(s, callables=None, constants=None):
   if callables is None:
     callables = {}
   if constants is None:
-    constants = {'None': None, 'True': True, 'False': False}
+    constants = {}
   assert isinstance(callables, dict)
   assert isinstance(constants, dict)
 
@@ -81,14 +79,21 @@ def Eval(s, callables=None, constants=None):
   if isinstance(node, ast.Expression):
     node = node.body
 
-  ast_bytes = ast.Bytes if hasattr(ast, 'Bytes') else ast.Str
-
   def _Convert(node):
     """Convert the literal data in the node."""
-    if isinstance(node, (ast.Str, ast_bytes)):
-      return node.s
-    if isinstance(node, ast.Num):
-      return node.n
+    if hasattr(ast, 'Constant'):
+      if isinstance(node, ast.Constant):
+        return node.value
+    else:
+      if isinstance(
+          node, (ast.Str, ast.Bytes if hasattr(ast, 'Bytes') else ())
+      ):
+        return node.s
+      if isinstance(node, ast.Num):
+        return node.n
+      if hasattr(ast, 'NameConstant') and isinstance(node, ast.NameConstant):
+        # True/False/None on Python 3 < 3.12
+        return node.value
     if isinstance(node, ast.UnaryOp):
       if isinstance(node.op, ast.USub) and isinstance(node.operand, ast.Num):
         return 0 - _Convert(node.operand)
@@ -125,9 +130,6 @@ def Eval(s, callables=None, constants=None):
     """Get the dotted name in the node."""
     if isinstance(node, ast.Name):
       return node.id
-    if hasattr(ast, 'NameConstant') and isinstance(node, ast.NameConstant):
-      # True/False/None on Python 3.
-      return str(node.value)
     if isinstance(node, ast.Attribute):
       lhs = _GetDottedName(node.value)
       return lhs + '.' + node.attr
