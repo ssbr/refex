@@ -81,21 +81,14 @@ def Eval(s, callables=None, constants=None):
 
   def _Convert(node):
     """Convert the literal data in the node."""
-    if hasattr(ast, 'Constant'):
-      if isinstance(node, ast.Constant):
-        return node.value
-    else:
-      if isinstance(
-          node, (ast.Str, ast.Bytes if hasattr(ast, 'Bytes') else ())
-      ):
-        return node.s
-      if isinstance(node, ast.Num):
-        return node.n
-      if hasattr(ast, 'NameConstant') and isinstance(node, ast.NameConstant):
-        # True/False/None on Python 3 < 3.12
-        return node.value
+    if isinstance(node, ast.Constant):
+      return node.value
     if isinstance(node, ast.UnaryOp):
-      if isinstance(node.op, ast.USub) and isinstance(node.operand, ast.Num):
+      if (
+          isinstance(node.op, ast.USub)
+          and isinstance(node.operand, ast.Constant)
+          and isinstance(node.operand.value, (int, float))
+      ):
         return 0 - _Convert(node.operand)
     if isinstance(node, ast.Tuple):
       return tuple([_Convert(elt) for elt in node.elts])

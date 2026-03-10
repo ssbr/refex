@@ -503,8 +503,12 @@ class StmtFromFunctionPattern(matcher.Matcher):
       raise ValueError('Function {} appears to have invalid syntax. Is it a'
                        ' lambda?'.format(self.func.__name__)) from e
     actual_body = parsed.body[0].body
-    if (isinstance(actual_body[0], ast.Expr) and
-        isinstance(actual_body[0].value, ast.Str)):
+    expr = actual_body[0]
+    if (
+        isinstance(expr, ast.Expr)
+        and isinstance(expr.value, ast.Constant)
+        and isinstance(expr.value.value, str)
+    ):
 
       # Strip the docstring, if it exists.
       actual_body = actual_body[1:]

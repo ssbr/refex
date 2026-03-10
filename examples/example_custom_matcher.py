@@ -39,8 +39,6 @@ class SumMatcher(matcher.Matcher):
       # Every node must either be a Constant/Num or an addition node.
       if isinstance(node, ast.Constant):
         values.append(node.value)
-      elif isinstance(node, ast.Num):  # older pythons
-        values.append(node.n)
       elif isinstance(node, ast.BinOp) or isinstance(node, ast.Add):
         # Binary operator nodes are allowed, but only if they have an Add() op.
         pass
