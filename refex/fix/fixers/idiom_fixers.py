@@ -303,8 +303,8 @@ _LOGGING_FIXERS = (
         example_replacement=textwrap.dedent("""
           try:
             x = bar() + baz()
-          except KeyError as e:
-            logging.exception('Bad thing happened: %s', e)
+          except KeyError:
+            logging.exception('Bad thing happened')
             """),
     ),
     fixer.SimplePythonFixer(
