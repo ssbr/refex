@@ -47,7 +47,7 @@ class ParsedFile:
 
   text = attr.ib(type=str)
   path = attr.ib(type=str)
-  pragmas = attr.ib(type=Iterable["Pragma"])
+  pragmas = attr.ib(type=Iterable["Pragma"])  # pyrefly: ignore[not-a-type]
 
   @cached_property.cached_property
   def line_numbers(self):

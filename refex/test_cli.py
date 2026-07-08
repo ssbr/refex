@@ -85,7 +85,7 @@ class ExceptionTest(absltest.TestCase):
     with cli._report_bug_excepthook('BUG_REPORT_URL'):
       hook = sys.excepthook
     with contextlib.redirect_stderr(err):
-      hook(*excepthook_args)
+      hook(*excepthook_args)  # pyrefly: ignore[bad-argument-type]
     self.assertRegex(
         err.getvalue(),
         r'Traceback(?:\n|.)*\nZeroDivisionError: Hello world\.\nIs this a bug\?'

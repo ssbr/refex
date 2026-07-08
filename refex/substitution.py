@@ -370,13 +370,13 @@ def disjoint_substitutions(subs: Iterable[Substitution]) -> List[Substitution]:
   last_start = last_end = last_sub = None
   for (start, end), sub in span_subs:
     if last_sub is not None:
-      if start >= last_end:
+      if start >= last_end:  # pyrefly: ignore[unsupported-operation]
         # no collision!
         disjoint_subs.append(last_sub)
       else:
         # they collide, keep the smallest as a heuristic to keep as many as
         # we can.
-        if end - start > last_end - last_start:
+        if end - start > last_end - last_start:  # pyrefly: ignore[unsupported-operation]
           continue
 
     last_start = start

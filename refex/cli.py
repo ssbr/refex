@@ -91,12 +91,12 @@ class UnicodeCodec(Codec):
   encoding = attr.ib(default='utf-8')
 
   def read(self, f: IO[bytes]) -> Content:
-    with io.TextIOWrapper(f, self.encoding) as f:
+    with io.TextIOWrapper(f, self.encoding) as f:  # pyrefly: ignore[bad-argument-type]
       return Content(data=f.read())
 
   def write(self, f: IO[bytes], content: Content) -> None:
-    with io.TextIOWrapper(f, self.encoding) as f:
-      f.write(content.data)
+    with io.TextIOWrapper(f, self.encoding) as f:  # pyrefly: ignore[bad-argument-type]
+      f.write(content.data)  # pyrefly: ignore[no-matching-overload]
 
 
 @attr.s
@@ -536,7 +536,7 @@ def _parse_templates(parser, sub_parser, templates):
     except Exception as e:  # Don't want to hardcode which exceptions each template can raise: pylint: disable=broad-except
       parser.error(str(e))  # exits
 
-    templates[name] = template
+    templates[name] = template  # pyrefly: ignore[unbound-name]
   return templates
 
 
@@ -735,7 +735,7 @@ def _parse_options(argv, parser):
   options.files.extend(args)
   options.color = _color_choices[options.color]
   options.renderer = formatting.Renderer(
-      match_format=options.format,
+      match_format=options.format,  # pyrefly: ignore[unexpected-keyword]
       color=options.color,
   )
 
@@ -877,7 +877,7 @@ def runner_from_options(parser, options) -> RefexRunner:
 
   if options.also or options.noalso:
     searcher = search.AlsoRegexpSearcher(
-        searcher=searcher, also=options.also, also_not=options.noalso)
+        searcher=searcher, also=options.also, also_not=options.noalso)  # pyrefly: ignore[unexpected-keyword]
 
   if not options.force_enable:
     searcher = search.PragmaSuppressedSearcher(searcher)

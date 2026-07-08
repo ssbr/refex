@@ -373,12 +373,12 @@ class LexicalMatch(match.Match):
   include_last = attr.ib(type=bool, default=True)
 
   @cached_property.cached_property
-  def string(self):
+  def string(self):  # pyrefly: ignore[bad-override]
     start, end = self.span
     return self._text[start:end]
 
   @cached_property.cached_property
-  def span(self):
+  def span(self):  # pyrefly: ignore[bad-override]
     if self.include_first:
       start = self.first_token.startpos
     else:
@@ -394,7 +394,7 @@ class LexicalMatch(match.Match):
 class LexicalASTMatch(match.ObjectMatch, LexicalMatch):
   """AST match with adjustable start/end tokens."""
   # Override for better type checking.
-  matched: ast.AST = None
+  matched: ast.AST = None  # pyrefly: ignore[bad-assignment, bad-override]
 
 
 # TODO: describe create_match with overloads for more precise type checking.
@@ -1081,12 +1081,12 @@ class AstNav:
           attr_value = getattr(node, attribute, None)
           if attr_value is None:
             continue
-          parents[_CompareById(attr_value)] = (node, _BreadcrumbType.ATTR,
+          parents[_CompareById(attr_value)] = (node, _BreadcrumbType.ATTR,  # pyrefly: ignore[unsupported-operation]
                                                attribute)
           nodes.append(attr_value)
       elif isinstance(node, list):
         for i, subnode in enumerate(node):
-          parents[_CompareById(subnode)] = (node, _BreadcrumbType.ITEM, i)
+          parents[_CompareById(subnode)] = (node, _BreadcrumbType.ITEM, i)  # pyrefly: ignore[unsupported-operation]
           nodes.append(subnode)
       else:
         # A string attribute, something along those lines.
