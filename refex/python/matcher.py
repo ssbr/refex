@@ -420,7 +420,7 @@ def create_match(
   """
 
   if _is_lexical_match(matched):
-    return LexicalASTMatch(matched, parsed.text, matched.first_token,
+    return LexicalASTMatch(matched, parsed.text, matched.first_token,  # pyrefly: ignore[bad-argument-type]
                            matched.last_token)
   elif isinstance(matched, str):
     return match.StringMatch(string=matched)

@@ -345,7 +345,7 @@ def labeled_spans(sub: Substitution):
       pos = ends.pop()
       to_remove |= end_to_labels[pos]
     if range_start is not None:
-      yield LabeledSpan(span=(range_start, pos), labels=current_labels)
+      yield LabeledSpan(span=(range_start, pos), labels=current_labels)  # pyrefly: ignore[bad-argument-type]
     range_start = pos
     current_labels = (current_labels | to_add) - to_remove
 

@@ -69,7 +69,7 @@ MetaT = TypeVar('MetaT')
 @attr.s
 class Content(Generic[MetaT]):
   data: str = attr.ib()
-  metadata: MetaT = attr.ib(default=None)
+  metadata: MetaT = attr.ib(default=None)  # pyrefly: ignore[bad-assignment]
 
 
 class Codec(abc.ABC):
@@ -92,7 +92,7 @@ class UnicodeCodec(Codec):
 
   def read(self, f: IO[bytes]) -> Content:
     with io.TextIOWrapper(f, self.encoding) as f:  # pyrefly: ignore[bad-argument-type]
-      return Content(data=f.read())
+      return Content(data=f.read())  # pyrefly: ignore[bad-argument-type]
 
   def write(self, f: IO[bytes], content: Content) -> None:
     with io.TextIOWrapper(f, self.encoding) as f:  # pyrefly: ignore[bad-argument-type]

@@ -79,7 +79,7 @@ class StringMatch(Match):
   .. attribute:: string
   .. attribute:: span
   """
-  string = attr.ib(type=str)
+  string = attr.ib(type=str)  # pyrefly: ignore[bad-override]
 
 
 @attr.s(frozen=True)
@@ -89,7 +89,7 @@ class SpanMatch(StringMatch):
   .. attribute:: string
   .. attribute:: span
   """
-  span = attr.ib(type=Tuple[int, int])
+  span = attr.ib(type=Tuple[int, int])  # pyrefly: ignore[bad-override]
 
   @classmethod
   def from_text(cls, text: str, span: Tuple[int, int]) -> "SpanMatch":
