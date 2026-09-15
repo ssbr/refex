@@ -631,11 +631,13 @@ class BaseRewritingSearcher(AbstractSearcher):
     """Returns the ``key_span`` that the final ``Substitution`` will have."""
     return None
 
-
   def find_iter_parsed(
       self,
       parsed: _matcher.PythonParsedFile) -> Iterable[substitution.Substitution]:
     for match_dict, templates in self.find_dicts_parsed(parsed):
+      root_match = match_dict.get(ROOT_LABEL)
+      if root_match is None or root_match.span in (None, (-1, -1)):
+        continue
       try:
         replacements = formatting.rewrite_templates(parsed, match_dict,
                                                     templates)
