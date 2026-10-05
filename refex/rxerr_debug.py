@@ -55,8 +55,8 @@ def main(argv):
     except KeyError:
       pass
     else:
-      lexer = lexers.PythonTracebackLexer()  # pytype: disable=module-attr
-      formatter = formatters.Terminal256Formatter()  # pytype: disable=module-attr
+      lexer = lexers.PythonTracebackLexer()  # pyrefly: ignore[missing-attribute]
+      formatter = formatters.Terminal256Formatter()  # pyrefly: ignore[missing-attribute]
       print(pygments.highlight(tb, lexer, formatter))
 
 

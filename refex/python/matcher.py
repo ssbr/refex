@@ -394,7 +394,7 @@ class LexicalMatch(match.Match):
 class LexicalASTMatch(match.ObjectMatch, LexicalMatch):
   """AST match with adjustable start/end tokens."""
   # Override for better type checking.
-  matched: ast.AST = None  # pyrefly: ignore[bad-assignment, bad-override]
+  matched: ast.AST = None  # pyrefly: ignore[bad-assignment]
 
 
 # TODO: describe create_match with overloads for more precise type checking.

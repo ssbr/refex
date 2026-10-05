@@ -735,7 +735,7 @@ def _parse_options(argv, parser):
   options.files.extend(args)
   options.color = _color_choices[options.color]
   options.renderer = formatting.Renderer(
-      match_format=options.format,  # pyrefly: ignore[unexpected-keyword]
+      match_format=options.format,
       color=options.color,
   )
 
@@ -877,7 +877,7 @@ def runner_from_options(parser, options) -> RefexRunner:
 
   if options.also or options.noalso:
     searcher = search.AlsoRegexpSearcher(
-        searcher=searcher, also=options.also, also_not=options.noalso)  # pyrefly: ignore[unexpected-keyword]
+        searcher=searcher, also=options.also, also_not=options.noalso)
 
   if not options.force_enable:
     searcher = search.PragmaSuppressedSearcher(searcher)
