@@ -28,6 +28,7 @@ import collections
 import contextlib
 import cProfile as profile
 import errno
+import importlib.metadata
 import io
 import json
 import os
@@ -42,7 +43,6 @@ from absl import app
 from absl.flags import argparse_flags
 import attr
 import colorama
-import pkg_resources
 from refex import formatting
 from refex import search
 from refex.fix import find_fixer
@@ -923,8 +923,8 @@ def main(argv=None, bug_report_url=_BUG_REPORT_URL, version=None):
     argv = sys.argv
   if version is None:
     try:
-      version = pkg_resources.get_distribution('refex').version
-    except pkg_resources.DistributionNotFound as e:
+      version = importlib.metadata.version('refex')
+    except importlib.metadata.PackageNotFoundError as e:
       # e.g. if vendored *cough* :(
       version = 'DistributionNotFound: {e}\n{long_desc}'.format(
           e=e,
