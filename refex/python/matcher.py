@@ -1333,6 +1333,7 @@ def parse_ast(source_code: str, filename: str = '<string>') -> PythonParsedFile:
     # UnicodeDecodeError is also a ValueError subclass, so we want to catch
     # it specially.
     raise ParseError('UnicodeDecodeError: {}'.format(e))
+  assert astt.tree is not None
   parsed = PythonParsedFile(
       text=source_code,
       path=filename,
